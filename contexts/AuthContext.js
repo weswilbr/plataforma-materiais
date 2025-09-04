@@ -1,7 +1,10 @@
 // NOME DO ARQUIVO: contexts/AuthContext.js
-// Gerencia o estado de autenticação (quem está logado e qual o seu perfil).
+// Lógica de autenticação agora integrada com o Firebase.
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { auth, db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -9,31 +12,56 @@ export function useAuth() {
     return useContext(AuthContext);
 }
 
-// Para este exemplo, usamos uma lista de usuários "mock".
-// Numa aplicação real, isto viria de uma base de dados.
-const mockUsers = [
-    { id: 1, username: 'admin', password: 'password', role: 'admin', name: 'Administrador' },
-    { id: 2, username: 'user', password: 'password', role: 'user', name: 'Usuário Padrão' },
-];
-
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    const login = (username, password) => {
-        const foundUser = mockUsers.find(u => u.username === username && u.password === password);
-        if (foundUser) {
-            setUser({ username: foundUser.username, role: foundUser.role, name: foundUser.name });
-            return true; // Sucesso no login
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                // Busca o perfil do usuário no Firestore para obter a "role"
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setUser({
+                        uid: firebaseUser.uid,
+                        email: firebaseUser.email,
+                        ...userDoc.data()
+                    });
+                } else {
+                    // Usuário autenticado mas sem perfil no Firestore (caso de erro)
+                    setUser(null);
+                }
+            } else {
+                setUser(null);
+            }
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const login = async (email, password) => {
+        try {
+            // Para o login, usamos emails (ex: admin@equipe.com) e senhas
+            await signInWithEmailAndPassword(auth, email, password);
+            return true;
+        } catch (error) {
+            console.error("Erro no login:", error.message);
+            return false;
         }
-        return false; // Falha no login
     };
 
     const logout = () => {
-        setUser(null);
+        return signOut(auth);
     };
 
-    const value = { user, login, logout };
+    const value = { user, login, logout, loading };
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider value={value}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
 }
 

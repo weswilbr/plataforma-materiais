@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/LoginScreen.js
-// Tela de Login com layout full-screen para mobile e visualizador de senha.
+// Tela de Login com layout full-screen para mobile, visualizador de senha e feedback de loading.
 
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -24,13 +24,23 @@ const EyeIcon = ({ closed }) => (
 );
 
 const LoginScreen = () => {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
 
-    const handleSubmit = (e) => { e.preventDefault(); setError(''); const success = login(username, password); if (!success) { setError('Nome de usuário ou senha inválidos.'); } };
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+        const success = await login(email, password);
+        if (!success) {
+            setError('Email ou senha inválidos.');
+        }
+        setIsLoading(false);
+    };
     
     return (
         <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-indigo-950">
@@ -38,11 +48,12 @@ const LoginScreen = () => {
                 <div className="text-center">
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Bem-vindo à Plataforma</h1>
                     <p className="mt-2 text-slate-600 dark:text-slate-400">Faça login para continuar</p>
+                    <p className="text-xs text-slate-500 mt-4">Teste com: admin@equipe.com ou user@equipe.com (senha: 123456)</p>
                 </div>
                 <form className="space-y-6" onSubmit={handleSubmit}>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Usuário</label>
-                        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-2 bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" placeholder="admin ou user" />
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" placeholder="seu@email.com" />
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Senha</label>
@@ -52,7 +63,7 @@ const LoginScreen = () => {
                                 value={password} 
                                 onChange={(e) => setPassword(e.target.value)} 
                                 className="w-full px-4 py-2 pr-10 bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" 
-                                placeholder="senha" 
+                                placeholder="******" 
                             />
                             <button 
                                 type="button" 
@@ -64,7 +75,20 @@ const LoginScreen = () => {
                         </div>
                     </div>
                     {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-                    <button type="submit" className="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Entrar</button>
+                    <button 
+                        type="submit" 
+                        className="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition flex items-center justify-center disabled:bg-slate-400 disabled:cursor-not-allowed"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <>
+                                <div className="loader mr-3"></div>
+                                <span>Entrando...</span>
+                            </>
+                        ) : (
+                            'Entrar'
+                        )}
+                    </button>
                 </form>
             </div>
         </div>
