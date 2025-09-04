@@ -1,17 +1,15 @@
 // NOME DO ARQUIVO: data/materials.js
-// Este arquivo centraliza todos os dados estáticos da plataforma.
+// Centraliza todos os dados e links de materiais da plataforma.
 
-// Dados da seção "Profissionais de Saúde"
 export const professionalTestimonials = {
-    'dra_lorenlay_rachid': { type: 'file', title: 'Dra. Lorenlay Rachid', url: '#' },
-    'dra_stella': { type: 'file', title: 'Dra. Stella', url: '#' },
-    'dr_nelson_annunciato': { type: 'file', title: 'Dr. Nelson Annunciato', url: '#' },
-    'dr_kleiner': { type: 'file', title: 'Dr. Kleiner', url: '#' },
-    'dr_gino': { type: 'file', title: 'Dr. Gino', url: '#' },
-    'dr_flavio': { type: 'file', title: 'Dr. Flavio', url: '#' },
+    'dra_lorenlay_rachid': { type: 'file', title: 'Dra. Lorenlay Rachid', url: '/path/to/video.mp4' },
+    'dra_stella': { type: 'file', title: 'Dra. Stella', url: '/path/to/video.mp4' },
+    'dr_nelson_annunciato': { type: 'file', title: 'Dr. Nelson Annunciato', url: '/path/to/video.mp4' },
+    'dr_kleiner': { type: 'file', title: 'Dr. Kleiner', url: '/path/to/video.mp4' },
+    'dr_gino': { type: 'file', title: 'Dr. Gino', url: '/path/to/video.mp4' },
+    'dr_flavio': { type: 'file', title: 'Dr. Flavio', url: '/path/to/video.mp4' },
 };
 
-// Dados da seção "Canais"
 export const channels = {
     youtube: [
         { title: "Dr José Benjamín Pérez Y Sara Meléndez", url: "https://www.youtube.com/@DrJos%C3%A9Benjam%C3%ADnP%C3%A9rezySaraM" },
@@ -29,7 +27,6 @@ export const channels = {
     ]
 };
 
-// Dados da seção "Ranking"
 export const positionsData = {
     "Associate": { emoji: "🔹", pv_mensal: 50, inscritos_pessoais: 1, media_ganho: 233.0, nivel_categoria: "Início", observacao: "1 cliente preferencial ou afiliado pessoal" },
     "Builder": { emoji: "🔸", pv_mensal: 50, inscritos_pessoais: 3, media_ganho: 490.0, nivel_categoria: "Construção", observacao: "3 inscritos pessoais com 50 PV/mês" },
@@ -48,105 +45,109 @@ export const positionsData = {
     "Platinum Elite": { emoji: "👑", pv_mensal: 50, inscritos_pessoais: 12, lp_nos_3_niveis: 20000, linhas_qualificadas: [{ quantidade: 3, posicao: "Platinum" }], vo_rede: 2000000.0, media_ganho: 1564172.0, viagens_incentivo: true, nivel_categoria: "Topo da Carreira", observacao: "Metade dos inscritos deve estar na linha de frente" }
 };
 
-// Dados da seção "Glossário"
 export const glossaryTerms = {
     'upline': { title: 'Upline', emoji: '🔝', definition: 'A linha de Afiliados diretamente acima de você.' }, 'matriculador': { title: 'Matriculador', emoji: '👤', definition: 'A pessoa que apresentou a 4Life para você (pode ser também o seu patrocinador).' }, 'patrocinador': { title: 'Patrocinador', emoji: '🧑‍💼', definition: 'A pessoa em sua linha upline que está diretamente acima de você.' }, 'volume_equipe': { title: 'Volume Equipe', emoji: '📈', definition: 'O Volume Principal, mais os pedidos de sua linha frontal de Clientes Preferenciais e Afiliados.' }, 'linha_frontal': { title: 'Linha Frontal', emoji: '👥', definition: 'Seu primeiro nível de Clientes Preferenciais e Afiliados que você patrocinou.' }, 'volume_tres_niveis': { title: 'Volume Três Níveis', emoji: '🔢', definition: 'Composto pelo total de seu Volume Principal (PV) e o PV combinado das pessoas em seus três primeiros níveis.' }, 'clientes_varejo': { title: 'Clientes Varejo', emoji: '🛒', definition: 'Clientes que compram os produtos da 4Life no preço de varejo.' }, 'clientes_preferenciais': { title: 'Clientes Preferenciais', emoji: '🏷️', definition: 'Clientes que se inscrevem para comprar produtos 4Life a preços de atacado.' }, 'downline': { title: 'Downline', emoji: '⬇️', definition: 'A linha de Afiliados e Clientes Preferenciais que ficam diretamente abaixo de você.' }, 'perna': { title: 'Perna', emoji: '📊', definition: 'Uma parte de seus downlines que começa com uma pessoa de sua linha frontal e continua abaixo daquele Afiliado.' }, 'lp': { title: 'Life Points (LP)', emoji: '💰', definition: 'Valor em pontos atribuído a cada produto da 4Life, usado para calcular comissões.' }, 'pv': { title: 'Volume Principal (PV)', emoji: '🏦', definition: 'O total de LP dos produtos comprados por você, para consumo próprio ou para venda a varejo.' }, 'vo': { title: 'Volume Organizacional (VO)', emoji: '📊', definition: 'Os LP de suas compras pessoais, clientes e todos os Afiliados e clientes em sua downline.' }, 'bonus_rapido': { title: 'Bônus Rápido', emoji: '💸', definition: 'Comissão de 25% sobre o primeiro pedido de cada novo Cliente Preferencial inscrito pessoalmente.' }, 'programa_fidelidade': { title: 'Programa Fidelidade', emoji: '🎁', definition: 'Recompensa Afiliados e Clientes Preferenciais que compram mensalmente com 15% em Pontos de Fidelidade.' }, 'compressao': { title: 'Compressão', emoji: '🔄', definition: 'Afiliados que não se qualificam não são contados no cálculo de comissões.' }, 'bonus_builder': { title: 'Bônus Builder', emoji: '🏆', definition: 'Bônus para incentivar Afiliados a inscrever novos clientes e reter sua rede.' }
 };
 
-// Dados da seção "Tabelas"
 export const tablesMaterials = {
-    precos_produtos: { afiliado: { type: 'file', title: 'Preço Afiliado', url: '#' }, loja: { type: 'file', title: 'Preço Loja', url: '#' }, consumidor: { type: 'file', title: 'Preço Consumidor', url: '#' } },
-    precos_kits: { toppacks: { type: 'file', title: 'Kit Top Packs', url: '#' }, faststart: { type: 'file', title: 'Kit Fast Start', url: '#' }, fidelidade: { type: 'file', title: 'Kit Fidelidade', url: '#' } },
-    pontos: { type: 'file', title: 'Tabela de Pontos', url: '#' },
-    resgate_fidelidade: { type: 'file', title: 'Tabela Resgate Fidelidade', url: '#' }
+    precos_produtos: { afiliado: { type: 'file', title: 'Preço Afiliado', url: '/path/to/tabela_afiliado.jpg' }, loja: { type: 'file', title: 'Preço Loja', url: '/path/to/tabela_loja.jpg' }, consumidor: { type: 'file', title: 'Preço Consumidor', url: '/path/to/tabela_consumidor.jpg' } },
+    precos_kits: { toppacks: { type: 'file', title: 'Kit Top Packs', url: '/path/to/kits_toppacks.pdf' }, faststart: { type: 'file', title: 'Kit Fast Start', url: '/path/to/kits_faststart.pdf' }, fidelidade: { type: 'file', title: 'Kit Fidelidade', url: '/path/to/kits_fidelidade.pdf' } },
+    pontos: { type: 'file', title: 'Tabela de Pontos', url: '/path/to/tabela_pontos.jpg' },
+    resgate_fidelidade: { type: 'file', title: 'Tabela Resgate Fidelidade', url: '/path/to/tabela_resgate.jpg' }
 };
 
-// Dados da seção "Treinamentos"
 export const trainingMaterials = {
     "Material da Academia de Platinos": [
-        { type: 'file', title: "Manejo de Objeções", url: "#" },
-        { type: 'file', title: "Cuidados e Gerenciamento de clientes", url: "#" },
-        { type: 'file', title: "Tipo de Fechamento - Lina Maria", url: "#" }
+        { type: 'file', title: "Manejo de Objeções", url: "/path/to/file.pdf" },
+        { type: 'file', title: "Cuidados e Gerenciamento de clientes", url: "/path/to/file.pdf" },
+        { type: 'file', title: "Tipo de Fechamento - Lina Maria", url: "/path/to/file.pdf" }
     ],
     "Tutoriais": [
-        { type: 'file', title: "Simular Preço Produto no APP", url: "#" }
+        { type: 'file', title: "Simular Preço Produto no APP", url: "/path/to/video.mp4" }
     ]
 };
 
-// Dados da seção "Plano de Recompensas"
 export const rewardsMaterials = {
-    pdf: { type: 'file', title: 'Plano de Recompensas 2024', description: 'Baixe o documento completo.', url: '#' },
+    pdf: { type: 'file', title: 'Plano de Recompensas 2024', description: 'Baixe o documento completo.', url: '/path/to/recompensas.pdf' },
 };
 
-// Dados da seção "Marketing de Rede"
 export const marketingMaterials = {
     youtube: { type: 'link', title: 'Assistir no YouTube', description: 'Veja o vídeo sobre Marketing de Rede.', url: 'https://www.youtube.com/watch?v=Fkeax_D_1m0' },
-    arquivo: { type: 'file', title: 'Baixar Vídeo', description: 'Baixe o arquivo do vídeo para usar offline.', url: '#' },
+    arquivo: { type: 'file', title: 'Baixar Vídeo', description: 'Baixe o arquivo do vídeo para usar offline.', url: '/path/to/marketing_video.mp4' },
 };
 
-// Dados da seção "Folheteria"
 export const brochureMaterials = {
-    panfletos: { panfletoprodutosnovo: { type: 'file', title: 'Panfleto de Produtos', url: '#' }, panfletonovo4life: { type: 'file', title: 'Panfleto Oficial 4Life', url: '#' }, },
-    catalogo: { type: 'file', title: 'Catálogo 4Life', url: '#' },
-    enquete: { type: 'file', title: 'Enquete Imunidade', url: '#' },
+    panfletos: { panfletoprodutosnovo: { type: 'file', title: 'Panfleto de Produtos', url: '/path/to/panfleto_produtos.pdf' }, panfletonovo4life: { type: 'file', title: 'Panfleto Oficial 4Life', url: '/path/to/panfleto_oficial.pdf' }, },
+    catalogo: { type: 'file', title: 'Catálogo 4Life', url: '/path/to/catalogo.pdf' },
+    enquete: { type: 'file', title: 'Enquete Imunidade', url: '/path/to/enquete.pdf' },
 };
 
-// Dados da seção "Programa de Fidelidade"
 export const loyaltyMaterials = {
     video_youtube: { type: 'link', title: 'Assistir no YouTube', description: 'Veja o vídeo sobre o Programa de Fidelidade.', url: 'https://youtu.be/f7bvrk7hh3U?si=-3PLes7BRFBcKPHY' },
-    video_arquivo: { type: 'file', title: 'Baixar Vídeo', description: 'Baixe o arquivo do vídeo para usar offline.', url: '#' },
+    video_arquivo: { type: 'file', title: 'Baixar Vídeo', description: 'Baixe o arquivo do vídeo para usar offline.', url: '/path/to/fidelidade.mp4' },
 };
 
-// Dados da seção "Fatores de Transferência"
 export const transferFactorMaterials = {
-    video1: { type: 'file', title: 'Como funcionam os FTs', url: '#' }, video2: { type: 'file', title: 'Animação - O que são os FTs', url: '#' }, video3: { type: 'file', title: 'Os 3 R\'s do Sistema Imunológico', url: '#' }, video4: { type: 'file', title: 'História com David Lisonbee', url: '#' }, ft1: { type: 'file', title: 'FT1 (Formato vertical)', url: '#' }, capsula: { type: 'file', title: 'O caminho de uma cápsula', url: '#' }, table: { type: 'file', title: 'Tabela Porção de TF por produto', url: '#' }, pubmed: { type: 'link', title: 'NIH - PubMed Fatores de Transferência', url: 'https://youtu.be/v-h387fXKcA' }
+    video1: { type: 'file', title: 'Como funcionam os FTs', url: '/path/to/video.mp4' }, video2: { type: 'file', title: 'Animação - O que são os FTs', url: '/path/to/video.mp4' }, video3: { type: 'file', title: 'Os 3 R\'s do Sistema Imunológico', url: '/path/to/video.mp4' }, video4: { type: 'file', title: 'História com David Lisonbee', url: '/path/to/video.mp4' }, ft1: { type: 'file', title: 'FT1 (Formato vertical)', url: '/path/to/video.mp4' }, capsula: { type: 'file', title: 'O caminho de uma cápsula', url: '/path/to/video.mp4' }, table: { type: 'file', title: 'Tabela Porção de TF por produto', url: '/path/to/tabela.pdf' }, pubmed: { type: 'link', title: 'NIH - PubMed Fatores de Transferência', url: 'https://youtu.be/v-h387fXKcA' }
 };
 
-// Dados da seção "Fábrica 4Life"
 export const factoryMaterials = {
-    armazem: { type: 'file', title: 'Armazém 4Life', description: 'Conheça nosso centro de distribuição.', url: '#' },
-    envase: { type: 'file', title: 'Envase de Produtos', description: 'Veja o processo de envase e qualidade.', url: '#' },
-    novafabrica: { type: 'file', title: 'Nova Fábrica 4Life', description: 'Tour pela nossa nova e moderna fábrica (2 vídeos).', url: '#' }
+    armazem: { type: 'file', title: 'Armazém 4Life', description: 'Conheça nosso centro de distribuição.', url: '/path/to/video.mp4' },
+    envase: { type: 'file', title: 'Envase de Produtos', description: 'Veja o processo de envase e qualidade.', url: '/path/to/video.mp4' },
+    novafabrica: { type: 'file', title: 'Nova Fábrica 4Life', description: 'Tour pela nossa nova e moderna fábrica (2 vídeos).', url: '/path/to/video.mp4' }
 };
 
-// Dados da seção "Bônus Construtor"
 export const bonusBuilderMaterials = {
-    video_arquivo: { type: 'file', title: 'Vídeo Bônus Construtor', description: 'Baixe o arquivo de vídeo.', url: '#' },
-    documento_guia: { type: 'file', title: 'Guia Bônus Construtor', description: 'Leia o guia completo em PDF.', url: '#' },
+    video_arquivo: { type: 'file', title: 'Vídeo Bônus Construtor', description: 'Baixe o arquivo de vídeo.', url: '/path/to/bonus_construtor.mp4' },
+    documento_guia: { type: 'file', title: 'Guia Bônus Construtor', description: 'Leia o guia completo em PDF.', url: '/path/to/guia_bonus_construtor.pdf' },
     video_youtube: { type: 'link', title: 'Assistir no YouTube', description: 'Veja o vídeo explicativo.', url: 'https://youtu.be/iyMiw0VpQ0Q' }
 };
 
-// Dados da seção "Apresentação da Oportunidade"
 export const opportunityMaterials = {
     video_completo: { type: 'link', title: 'Vídeo Completo (Link)', description: 'Apresentação completa da oportunidade.', url: 'https://youtu.be/ujAhVMjgzOs?si=Rr6BtJVmPi6ham7u' },
     video_compacto_link: { type: 'link', title: 'Vídeo Compacto (Link)', description: 'Versão resumida da apresentação (13 min).', url: 'https://youtu.be/EFfp0sfkp_8?si=sPzlYq1qaPi1S91q' },
-    video_compacto_arquivo: { type: 'file', title: 'Vídeo Compacto (Arquivo)', description: 'Baixe o vídeo compacto.', url: '#' },
-    pdf_apresentacao: { type: 'file', title: 'PDF Apresentação', description: 'Slides da apresentação em PDF.', url: '#' },
-    powerpoint_apresentacao: { type: 'file', title: 'PowerPoint', description: 'Arquivo .pptx editável.', url: '#' },
-    porque_4life_arquivo: { type: 'file', title: 'Por que 4Life? (Arquivo)', description: 'Baixe o vídeo que explica os diferenciais.', url: '#' },
+    video_compacto_arquivo: { type: 'file', title: 'Vídeo Compacto (Arquivo)', description: 'Baixe o vídeo compacto.', url: '/path/to/video_compacto.mp4' },
+    pdf_apresentacao: { type: 'file', title: 'PDF Apresentação', description: 'Slides da apresentação em PDF.', url: '/path/to/plano_completo.pdf' },
+    powerpoint_apresentacao: { type: 'file', title: 'PowerPoint', description: 'Arquivo .pptx editável.', url: '/path/to/apresentacao.pptx' },
+    porque_4life_arquivo: { type: 'file', title: 'Por que 4Life? (Arquivo)', description: 'Baixe o vídeo que explica os diferenciais.', url: '/path/to/porque_4life.mp4' },
     porque_4life_link: { type: 'link', title: 'Por que 4Life? (Link)', description: 'Assista ao vídeo sobre os diferenciais.', url: 'https://youtu.be/lmnWUrijAeM' }
 };
 
-// Dados da seção "Produtos"
 export const productData = {
     riovidaburst: { name: 'RioVida Burst', options: ['perfil', 'videos', 'perfil_mobile', 'pitch_venda', 'recorte_png', 'imagens', 'carrosseis'], content: { perfil: { type: 'document', text: 'Documento com o perfil principal do RioVida Burst.' }, videos: { type: 'video', text: 'Aqui seriam exibidos os vídeos sobre o RioVida Burst.' }, perfil_mobile: { type: 'image', text: 'Imagem do perfil do produto, otimizada para celular.' }, recorte_png: { type: 'file', text: 'Arquivo PNG com recorte do produto para download.' }, imagens: { type: 'gallery', text: 'Galeria com imagens detalhadas do produto.' }, carrosseis: { type: 'gallery', text: 'Galeria com os carrosséis de imagens para redes sociais.' }, } },
-    riovidastix: { name: 'RioVida Stix', options: ['perfil', 'videos', 'pitch_venda'] }, bioefa: { name: 'BioEFA', options: ['perfil', 'pitch_venda', 'recorte_png'] }, energygostix: { name: 'Energy Go Stix', options: ['perfil', 'videos', 'perfil_mobile', 'pitch_venda'] }, tfplus: { name: 'TF-Plus', options: ['perfil', 'videos', 'pitch_venda'] }, tfplus30caps: { name: 'TF Plus 30 Cápsulas', options: ['perfil', 'pitch_venda'] }, tfzinco: { name: 'TF-Zinco', options: ['perfil', 'pitch_venda'] }, nutrastart: { name: 'Nutrastart', options: ['perfil', 'pitch_venda'] }, protf: { name: 'PRO-TF', options: ['perfil', 'videos', 'pitch_venda'] }, colageno: { name: 'Collagen', options: ['perfil', 'videos', 'pitch_venda'] }, tfboost: { name: 'TF-Boost', options: ['perfil', 'pitch_venda'] }, glutamineprime: { name: 'Glutamine Prime', options: ['perfil', 'pitch_venda'] }, tfmastigavel: { name: 'TF Mastigável', options: ['perfil', 'pitch_venda'] },
+    riovidastix: { name: 'RioVida Stix', options: ['perfil', 'videos', 'pitch_venda'] }, 
+    bioefa: { 
+        name: 'BioEFA', 
+        options: ['perfil', 'pitch_venda', 'recorte_png'],
+        content: {
+            perfil: { type: 'file', url: 'https://drive.google.com/file/d/1jygPn3j3LkytVNMfQY9cVczSYV8pTNnP/view?usp=drive_link' }
+        }
+    },
+    energygostix: { name: 'Energy Go Stix', options: ['perfil', 'videos', 'perfil_mobile', 'pitch_venda'] }, 
+    tfplus: { name: 'TF-Plus', options: ['perfil', 'videos', 'pitch_venda'] }, 
+    tfplus30caps: { name: 'TF Plus 30 Cápsulas', options: ['perfil', 'pitch_venda'] }, 
+    tfzinco: { name: 'TF-Zinco', options: ['perfil', 'pitch_venda'] }, 
+    nutrastart: { name: 'Nutrastart', options: ['perfil', 'pitch_venda'] }, 
+    protf: { name: 'PRO-TF', options: ['perfil', 'videos', 'pitch_venda'] }, 
+    colageno: { name: 'Collagen', options: ['perfil', 'videos', 'pitch_venda'] }, 
+    tfboost: { name: 'TF-Boost', options: ['perfil', 'pitch_venda'] }, 
+    glutamineprime: { name: 'Glutamine Prime', options: ['perfil', 'pitch_venda'] }, 
+    tfmastigavel: { name: 'TF Mastigável', options: ['perfil', 'pitch_venda'] },
 };
 
 export const individualProducts = [
     { id: 'riovidaburst', name: 'RioVida Burst' }, { id: 'riovidastix', name: 'RioVida Stix' }, { id: 'bioefa', name: 'Bioefa' }, { id: 'energygostix', name: 'Energy Go Stix' }, { id: 'tfplus', name: 'TF-Plus' }, { id: 'tfplus30caps', name: 'TF Plus 30 Cápsulas' }, { id: 'tfzinco', name: 'TF-Zinco' }, { id: 'nutrastart', name: 'Nutrastart' }, { id: 'protf', name: 'PRO-TF' }, { id: 'colageno', name: 'Collagen' }, { id: 'tfboost', name: 'TF-Boost' }, { id: 'glutamineprime', name: 'Glutamine Prime' }, { id: 'tfmastigavel', name: 'TF Mastigável' },
 ];
 
-// Dados da seção "Artes"
 export const artsMaterials = {
     artes_fixas: {
-        arte_camiseta: { type: 'file', title: 'Logo 4Life (Camisetas)', description: 'Baixe o logo oficial para usar em camisetas.', url: '#' },
-        banner_produtos: { type: 'file', title: 'Banner de Produtos', description: 'Banners promocionais prontos para uso.', url: '#' },
+        arte_camiseta: { type: 'file', title: 'Logo 4Life (Camisetas)', description: 'Baixe o arquivo para usar em camisetas.', url: '/path/to/your/arte_camiseta.pdf' },
+        banner_produtos: { type: 'file', title: 'Banner de Produtos', description: 'Banner genérico com vários produtos.', url: '/path/to/your/banner_produtos.png' },
     },
     criativos: {
-        imagem_estatica: { type: 'file', title: 'Imagem Estática', description: 'Modelos de imagens estáticas para o seu feed.', url: '#' },
-        carrossel: { type: 'link', title: 'Carrossel', description: 'Inspire-se com exemplos de carrosséis.', url: '#' },
-        video_curto: { type: 'file', title: 'Vídeo Curto', description: 'Modelos de vídeos curtos para Reels ou Stories.', url: '#' }
+        imagem_estatica: { type: 'file', title: 'Imagem Estática', description: 'Modelo de imagem para feed.', url: '/path/to/your/criativo_imagem.jpg' },
+        carrossel: { type: 'file', title: 'Carrossel', description: 'Exemplo de carrossel para redes sociais.', url: '/path/to/your/criativo_carrossel.zip' },
+        video_curto: { type: 'file', title: 'Vídeo Curto', description: 'Modelo de vídeo para Reels ou Stories.', url: '/path/to/your/criativo_video.mp4' },
     }
 };
 
