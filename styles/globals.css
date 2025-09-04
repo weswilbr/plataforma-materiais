@@ -1,0 +1,31 @@
+/* NOME DO ARQUIVO: styles/globals.css */
+/* Este arquivo define os estilos base do Tailwind e a animação do loader. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.loader {
+    border: 4px solid #f3f3f3; /* Cinza claro */
+    border-top: 4px solid #3b82f6; /* Azul (blue-500) para combinar com o novo tema */
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Animação de fade-in para o conteúdo */
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
