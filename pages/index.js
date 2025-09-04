@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: pages/index.js
-// Ponto de entrada da página, que renderiza Login ou a Plataforma.
+// Este é o ponto de entrada da sua página.
 
 import Head from 'next/head';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,7 +16,6 @@ export default function PlatformPage() {
                 <link rel="icon" href="/favicon.ico" />
             </Head>
             
-            {/* Renderiza a tela de Login ou a Plataforma completa com base no estado de autenticação */}
             {user ? <PlatformLayout /> : <LoginScreen />}
         </>
     );
