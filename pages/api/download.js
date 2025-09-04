@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: pages/api/download.js
-// Esta API atua como um proxy seguro para forçar o download direto de arquivos.
+// Versão corrigida com lógica robusta para garantir a extensão correta do arquivo.
 
 import { materialsMap } from '../../data/materials';
 
@@ -35,8 +35,33 @@ export default async function handler(request, response) {
             throw new Error('Falha ao buscar o arquivo do Google Drive.');
         }
 
-        // Tenta obter um nome de arquivo mais descritivo
-        let fileName = fileData.title ? `${fileData.title}.${fileData.url.split('.').pop()}` : path.split('.').pop();
+        // --- NOVA LÓGICA DE NOME DE ARQUIVO ---
+
+        let fileName = 'download'; // Nome padrão
+
+        // 1. Tenta obter o nome do arquivo do cabeçalho 'content-disposition' (mais confiável)
+        const disposition = fileResponse.headers.get('content-disposition');
+        if (disposition && disposition.includes('attachment')) {
+            const filenameMatch = disposition.match(/filename\*?=['"]?(?:UTF-\d'')?([^"']+)['"]?/);
+            if (filenameMatch && filenameMatch[1]) {
+                fileName = decodeURIComponent(filenameMatch[1]);
+            }
+        } else {
+            // 2. Se falhar, constrói o nome a partir do título e do tipo de conteúdo (MIME type)
+            let fileExtension = '';
+            const contentType = fileResponse.headers.get('content-type');
+            if (contentType) {
+                switch (contentType.split(';')[0]) {
+                    case 'application/pdf': fileExtension = '.pdf'; break;
+                    case 'image/jpeg': fileExtension = '.jpg'; break;
+                    case 'image/png': fileExtension = '.png'; break;
+                    case 'video/mp4': fileExtension = '.mp4'; break;
+                    case 'application/vnd.openxmlformats-officedocument.presentationml.presentation': fileExtension = '.pptx'; break;
+                    // Adicionar mais tipos conforme necessário
+                }
+            }
+            fileName = fileData.title ? `${fileData.title}${fileExtension}` : `download${fileExtension}`;
+        }
 
         // Define os cabeçalhos para forçar o download no navegador do usuário
         response.setHeader('Content-Type', fileResponse.headers.get('content-type') || 'application/octet-stream');
