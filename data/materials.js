@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: data/materials.js
-// Versão com todos os materiais agrupados para facilitar a busca pela API de download.
+// Centraliza todos os dados e links de materiais da plataforma.
 
 export const professionalTestimonials = {
     'dra_lorenlay_rachid': { type: 'file', title: 'Dra. Lorenlay Rachid', description: 'Baixe o vídeo.', url: '/path/to/video.mp4' },
@@ -46,7 +46,23 @@ export const positionsData = {
 };
 
 export const glossaryTerms = {
-    'upline': { title: 'Upline', emoji: '🔝', definition: 'A linha de Afiliados diretamente acima de você.' }, 'matriculador': { title: 'Matriculador', emoji: '👤', definition: 'A pessoa que apresentou a 4Life para você (pode ser também o seu patrocinador).' }, 'patrocinador': { title: 'Patrocinador', emoji: '🧑‍💼', definition: 'A pessoa em sua linha upline que está diretamente acima de você.' }, 'volume_equipe': { title: 'Volume Equipe', emoji: '📈', definition: 'O Volume Principal, mais os pedidos de sua linha frontal de Clientes Preferenciais e Afiliados.' }, 'linha_frontal': { title: 'Linha Frontal', emoji: '👥', definition: 'Seu primeiro nível de Clientes Preferenciais e Afiliados que você patrocinou.' }, 'volume_tres_niveis': { title: 'Volume Três Níveis', emoji: '🔢', definition: 'Composto pelo total de seu Volume Principal (PV) e o PV combinado das pessoas em seus três primeiros níveis.' }, 'clientes_varejo': { title: 'Clientes Varejo', emoji: '🛒', definition: 'Clientes que compram os produtos da 4Life no preço de varejo.' }, 'clientes_preferenciais': { title: 'Clientes Preferenciais', emoji: '🏷️', definition: 'Clientes que se inscrevem para comprar produtos 4Life a preços de atacado.' }, 'downline': { title: 'Downline', emoji: '⬇️', definition: 'A linha de Afiliados e Clientes Preferenciais que ficam diretamente abaixo de você.' }, 'perna': { title: 'Perna', emoji: '📊', definition: 'Uma parte de seus downlines que começa com uma pessoa de sua linha frontal e continua abaixo daquele Afiliado.' }, 'lp': { title: 'Life Points (LP)', emoji: '💰', definition: 'Valor em pontos atribuído a cada produto da 4Life, usado para calcular comissões.' }, 'pv': { title: 'Volume Principal (PV)', emoji: '🏦', definition: 'O total de LP dos produtos comprados por você, para consumo próprio ou para venda a varejo.' }, 'vo': { title: 'Volume Organizacional (VO)', emoji: '📊', definition: 'Os LP de suas compras pessoais, clientes e todos os Afiliados e clientes em sua downline.' }, 'bonus_rapido': { title: 'Bônus Rápido', emoji: '💸', definition: 'Comissão de 25% sobre o primeiro pedido de cada novo Cliente Preferencial inscrito pessoalmente.' }, 'programa_fidelidade': { title: 'Programa Fidelidade', emoji: '🎁', definition: 'Recompensa Afiliados e Clientes Preferenciais que compram mensalmente com 15% em Pontos de Fidelidade.' }, 'compressao': { title: 'Compressão', emoji: '🔄', definition: 'Afiliados que não se qualificam não são contados no cálculo de comissões.' }, 'bonus_builder': { title: 'Bônus Builder', emoji: '🏆', definition: 'Bônus para incentivar Afiliados a inscrever novos clientes e reter sua rede.' }
+    'upline': { title: 'Upline', emoji: '🔝', definition: 'A linha de Afiliados diretamente acima de você.' },
+    'matriculador': { title: 'Matriculador', emoji: '👤', definition: 'A pessoa que apresentou a 4Life para você (pode ser também o seu patrocinador).' },
+    'patrocinador': { title: 'Patrocinador', emoji: '🧑‍💼', definition: 'A pessoa em sua linha upline que está diretamente acima de você.' },
+    'volume_equipe': { title: 'Volume Equipe', emoji: '📈', definition: 'O Volume Principal, mais os pedidos de sua linha frontal de Clientes Preferenciais e Afiliados.' },
+    'linha_frontal': { title: 'Linha Frontal', emoji: '👥', definition: 'Seu primeiro nível de Clientes Preferenciais e Afiliados que você patrocinou.' },
+    'volume_tres_niveis': { title: 'Volume Três Níveis', emoji: '🔢', definition: 'Composto pelo total de seu Volume Principal (PV) e o PV combinado das pessoas em seus três primeiros níveis.' },
+    'clientes_varejo': { title: 'Clientes Varejo', emoji: '🛒', definition: 'Clientes que compram os produtos da 4Life no preço de varejo.' },
+    'clientes_preferenciais': { title: 'Clientes Preferenciais', emoji: '🏷️', definition: 'Clientes que se inscrevem para comprar produtos 4Life a preços de atacado.' },
+    'downline': { title: 'Downline', emoji: '⬇️', definition: 'A linha de Afiliados e Clientes Preferenciais que ficam diretamente abaixo de você.' },
+    'perna': { title: 'Perna', emoji: '📊', definition: 'Uma parte de seus downlines que começa com uma pessoa de sua linha frontal e continua abaixo daquele Afiliado.' },
+    'lp': { title: 'Life Points (LP)', emoji: '💰', definition: 'Valor em pontos atribuído a cada produto da 4Life, usado para calcular comissões.' },
+    'pv': { title: 'Volume Principal (PV)', emoji: '🏦', definition: 'O total de LP dos produtos comprados por você, para consumo próprio ou para venda a varejo.' },
+    'vo': { title: 'Volume Organizacional (VO)', emoji: '📊', definition: 'Os LP de suas compras pessoais, clientes e todos os Afiliados e clientes em sua downline.' },
+    'bonus_rapido': { title: 'Bônus Rápido', emoji: '💸', definition: 'Comissão de 25% sobre o primeiro pedido de cada novo Cliente Preferencial inscrito pessoalmente.' },
+    'programa_fidelidade': { title: 'Programa Fidelidade', emoji: '🎁', definition: 'Recompensa Afiliados e Clientes Preferenciais que compram mensalmente com 15% em Pontos de Fidelidade.' },
+    'compressao': { title: 'Compressão', emoji: '🔄', definition: 'Afiliados que não se qualificam não são contados no cálculo de comissões.' },
+    'bonus_builder': { title: 'Bônus Builder', emoji: '🏆', definition: 'Bônus para incentivar Afiliados a inscrever novos clientes e reter sua rede.' }
 };
 
 export const tablesMaterials = {
@@ -88,7 +104,14 @@ export const loyaltyMaterials = {
 };
 
 export const transferFactorMaterials = {
-    video1: { type: 'file', title: 'Como funcionam os FTs', url: '/path/to/video.mp4' }, video2: { type: 'file', title: 'Animação - O que são os FTs', url: '/path/to/video.mp4' }, video3: { type: 'file', title: 'Os 3 R\'s do Sistema Imunológico', url: '/path/to/video.mp4' }, video4: { type: 'file', title: 'História com David Lisonbee', url: '/path/to/video.mp4' }, ft1: { type: 'file', title: 'FT1 (Formato vertical)', url: '/path/to/video.mp4' }, capsula: { type: 'file', title: 'O caminho de uma cápsula', url: '/path/to/video.mp4' }, table: { type: 'file', title: 'Tabela Porção de TF por produto', url: '/path/to/tabela.pdf' }, pubmed: { type: 'link', title: 'NIH - PubMed Fatores de Transferência', url: 'https://youtu.be/v-h387fXKcA' }
+    video1: { type: 'file', title: 'Como funcionam os FTs', url: '/path/to/video.mp4' },
+    video2: { type: 'file', title: 'Animação - O que são os FTs', url: '/path/to/video.mp4' },
+    video3: { type: 'file', title: 'Os 3 R\'s do Sistema Imunológico', url: '/path/to/video.mp4' },
+    video4: { type: 'file', title: 'História com David Lisonbee', url: '/path/to/video.mp4' },
+    ft1: { type: 'file', title: 'FT1 (Formato vertical)', url: '/path/to/video.mp4' },
+    capsula: { type: 'file', title: 'O caminho de uma cápsula', url: '/path/to/video.mp4' },
+    table: { type: 'file', title: 'Tabela Porção de TF por produto', url: '/path/to/tabela.pdf' },
+    pubmed: { type: 'link', title: 'NIH - PubMed Fatores de Transferência', url: 'https://youtu.be/v-h387fXKcA' }
 };
 
 export const factoryMaterials = {
@@ -114,30 +137,35 @@ export const opportunityMaterials = {
 };
 
 export const productData = {
-    riovidaburst: { name: 'RioVida Burst', options: ['perfil', 'videos', 'perfil_mobile', 'pitch_venda', 'recorte_png', 'imagens', 'carrosseis'], content: { perfil: { type: 'document', url: '/path/to/doc.pdf' }, videos: { type: 'video', url: '/path/to/video.mp4' }, perfil_mobile: { type: 'image', url: '/path/to/img.jpg' }, recorte_png: { type: 'file', url: '/path/to/img.png' }, imagens: { type: 'gallery', text: 'Galeria com imagens detalhadas do produto.' }, carrosseis: { type: 'gallery', text: 'Galeria com os carrosséis de imagens para redes sociais.' }, } },
-    riovidastix: { name: 'RioVida Stix', options: ['perfil', 'videos', 'pitch_venda'] }, 
-    bioefa: { 
-        name: 'BioEFA', 
-        options: ['perfil', 'pitch_venda', 'recorte_png'],
-        content: {
-            perfil: { type: 'file', url: 'https://drive.google.com/file/d/1jygPn3j3LkytVNMfQY9cVczSYV8pTNnP/view?usp=drive_link' },
-            recorte_png: { type: 'file', url: '/path/to/image.png'}
-        }
-    },
-    energygostix: { name: 'Energy Go Stix', options: ['perfil', 'videos', 'perfil_mobile', 'pitch_venda'] }, 
-    tfplus: { name: 'TF-Plus', options: ['perfil', 'videos', 'pitch_venda'] }, 
-    tfplus30caps: { name: 'TF Plus 30 Cápsulas', options: ['perfil', 'pitch_venda'] }, 
-    tfzinco: { name: 'TF-Zinco', options: ['perfil', 'pitch_venda'] }, 
-    nutrastart: { name: 'Nutrastart', options: ['perfil', 'pitch_venda'] }, 
-    protf: { name: 'PRO-TF', options: ['perfil', 'videos', 'pitch_venda'] }, 
-    colageno: { name: 'Collagen', options: ['perfil', 'videos', 'pitch_venda'] }, 
-    tfboost: { name: 'TF-Boost', options: ['perfil', 'pitch_venda'] }, 
-    glutamineprime: { name: 'Glutamine Prime', options: ['perfil', 'pitch_venda'] }, 
-    tfmastigavel: { name: 'TF Mastigável', options: ['perfil', 'pitch_venda'] },
+    riovidaburst: { name: 'RioVida Burst', image: '/images/products/riovidaburst.png', options: ['perfil', 'videos', 'perfil_mobile', 'pitch_venda', 'recorte_png', 'imagens', 'carrosseis'], content: { perfil: { type: 'document', url: '/path/to/doc.pdf' }, videos: { type: 'video', url: '/path/to/video.mp4' }, perfil_mobile: { type: 'image', url: '/path/to/img.jpg' }, recorte_png: { type: 'file', url: '/path/to/img.png' }, imagens: { type: 'gallery', text: 'Galeria com imagens detalhadas do produto.' }, carrosseis: { type: 'gallery', text: 'Galeria com os carrosséis de imagens para redes sociais.' }, } },
+    riovidastix: { name: 'RioVida Stix', image: '/images/products/riovidastix.png', options: ['perfil', 'videos', 'pitch_venda'] },
+    bioefa: { name: 'BioEFA', image: '/images/products/bioefa.png', options: ['perfil', 'pitch_venda', 'recorte_png'], content: { perfil: { type: 'file', url: 'https://drive.google.com/file/d/1jygPn3j3LkytVNMfQY9cVczSYV8pTNnP/view?usp=drive_link' }, recorte_png: { type: 'file', url: '/path/to/image.png'} } },
+    energygostix: { name: 'Energy Go Stix', image: '/images/products/energygostix.png', options: ['perfil', 'videos', 'perfil_mobile', 'pitch_venda'] },
+    tfplus: { name: 'TF-Plus', image: '/images/products/tfplus.png', options: ['perfil', 'videos', 'pitch_venda'] },
+    tfplus30caps: { name: 'TF Plus 30 Cápsulas', image: '/images/products/tfplus30caps.png', options: ['perfil', 'pitch_venda'] },
+    tfzinco: { name: 'TF-Zinco', image: '/images/products/tfzinco.png', options: ['perfil', 'pitch_venda'] },
+    nutrastart: { name: 'Nutrastart', image: '/images/products/nutrastart.png', options: ['perfil', 'pitch_venda'] },
+    protf: { name: 'PRO-TF', image: '/images/products/protf.png', options: ['perfil', 'videos', 'pitch_venda'] },
+    colageno: { name: 'Collagen', image: '/images/products/collagen.png', options: ['perfil', 'videos', 'pitch_venda'] },
+    tfboost: { name: 'TF-Boost', image: '/images/products/tfboost.png', options: ['perfil', 'pitch_venda'] },
+    glutamineprime: { name: 'Glutamine Prime', image: '/images/products/glutamineprime.png', options: ['perfil', 'pitch_venda'] },
+    tfmastigavel: { name: 'TF Mastigável', image: '/images/products/tfmastigavel.png', options: ['perfil', 'pitch_venda'] },
 };
 
 export const individualProducts = [
-    { id: 'riovidaburst', name: 'RioVida Burst' }, { id: 'riovidastix', name: 'RioVida Stix' }, { id: 'bioefa', name: 'Bioefa' }, { id: 'energygostix', name: 'Energy Go Stix' }, { id: 'tfplus', name: 'TF-Plus' }, { id: 'tfplus30caps', name: 'TF Plus 30 Cápsulas' }, { id: 'tfzinco', name: 'TF-Zinco' }, { id: 'nutrastart', name: 'Nutrastart' }, { id: 'protf', name: 'PRO-TF' }, { id: 'colageno', name: 'Collagen' }, { id: 'tfboost', name: 'TF-Boost' }, { id: 'glutamineprime', name: 'Glutamine Prime' }, { id: 'tfmastigavel', name: 'TF Mastigável' },
+    { id: 'riovidaburst', name: 'RioVida Burst', image: '/images/products/riovidaburst.png' },
+    { id: 'riovidastix', name: 'RioVida Stix', image: '/images/products/riovidastix.png' },
+    { id: 'bioefa', name: 'Bioefa', image: '/images/products/bioefa.png' },
+    { id: 'energygostix', name: 'Energy Go Stix', image: '/images/products/energygostix.png' },
+    { id: 'tfplus', name: 'TF-Plus', image: '/images/products/tfplus.png' },
+    { id: 'tfplus30caps', name: 'TF Plus 30 Cápsulas', image: '/images/products/tfplus30caps.png' },
+    { id: 'tfzinco', name: 'TF-Zinco', image: '/images/products/tfzinco.png' },
+    { id: 'nutrastart', name: 'Nutrastart', image: '/images/products/nutrastart.png' },
+    { id: 'protf', name: 'PRO-TF', image: '/images/products/protf.png' },
+    { id: 'colageno', name: 'Collagen', image: '/images/products/collagen.png' },
+    { id: 'tfboost', name: 'TF-Boost', image: '/images/products/tfboost.png' },
+    { id: 'glutamineprime', name: 'Glutamine Prime', image: '/images/products/glutamineprime.png' },
+    { id: 'tfmastigavel', name: 'TF Mastigável', image: '/images/products/tfmastigavel.png' },
 ];
 
 export const artsMaterials = {

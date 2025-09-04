@@ -1,51 +1,8 @@
-<!-- NOME DO ARQUIVO: README.md -->
-
-Gerador de Convites com IA (Versão Next.js)
-Este projeto foi reestruturado para usar Next.js, um framework React que oferece uma excelente experiência de desenvolvimento e otimizações de produção, incluindo renderização no servidor e API routes.
-
-Estrutura de Pastas
-/pages: Contém as páginas e as rotas da API.
-
-/api/generate.js: A nossa função de backend segura que chama a API do Gemini.
-
-index.js: A página principal da aplicação, agora como um componente React.
-
-_app.js: O componente raiz da aplicação, onde os estilos globais são carregados.
-
-/styles: Contém os arquivos de estilo.
-
-globals.css: Estilos globais e configurações do Tailwind CSS.
-
-package.json: As dependências e scripts do projeto.
-
-tailwind.config.js: Arquivo de configuração do Tailwind CSS.
-
-.gitignore: Arquivos a serem ignorados pelo Git, atualizado para Next.js.
-
-Como Executar Localmente
-Instale as dependências:
-
-npm install
-
-Crie um arquivo de ambiente:
-
-Crie um arquivo chamado .env.local na raiz do projeto.
-
-Adicione sua chave da API nele:
-
-GEMINI_API_KEY=SUA_CHAVE_API_AQUI
-
-Rode o servidor de desenvolvimento:
-
-npm run dev
-
-Abra http://localhost:3000 no seu navegador.
-
-Deploy na Vercel
-O deploy continua muito similar:
-
-GitHub: Envie todos os novos arquivos e pastas para o seu repositório.
-
-Vercel: A Vercel detectará automaticamente que é um projeto Next.js.
-
-Variável de Ambiente: Vá para Settings -> Environment Variables no seu projeto na Vercel e adicione a GEMINI_API_KEY da mesma forma que antes. O Next.js lerá essa variável no lado do servidor.
+Plataforma de Apoio - Equipe de TriunfoBem-vindo à documentação oficial da Plataforma de Apoio da Equipe de Triunfo. Este projeto foi desenvolvido para centralizar ferramentas e materiais de marketing, utilizando tecnologias modernas para criar uma experiência de usuário rápida, segura e eficiente.🚀 Sobre o ProjetoEsta plataforma é uma aplicação web completa construída com Next.js, desenhada para servir como uma central de recursos para membros da equipe. Ela integra ferramentas de Inteligência Artificial para automação de conteúdo e um sistema de gerenciamento de materiais, com acesso restrito por perfis de usuário (Admin e Usuário Padrão).✨ Funcionalidades PrincipaisSistema de Autenticação: Tela de login segura para distinguir entre usuários comuns e administradores.Dashboard Dinâmico: O conteúdo e os menus se adaptam ao perfil do usuário logado.Gerador de Convites com IA: Ferramenta que utiliza a API do Gemini para criar convites de negócio personalizados com base no perfil do convidado e no tom desejado.Gerador de Copy para Anúncios: Funcionalidade de IA para criar automaticamente três opções de texto persuasivo para anúncios de tráfego pago.Navegador de Materiais: Interface organizada para explorar e baixar materiais de negócio, como vídeos, PDFs e apresentações.Design Responsivo: A plataforma é totalmente adaptada para funcionar perfeitamente em desktops, tablets e celulares.Proxy de Download Seguro: Uma API interna oculta os links originais dos materiais e força o download direto, protegendo o seu conteúdo e melhorando a experiência do usuário.🛠️ Tecnologias UtilizadasFramework: Next.js (React)Estilização: Tailwind CSSInteligência Artificial: Google Gemini APIHospedagem & Deploy: VercelControle de Versão: Git & GitHub⚙️ Guia de Instalação e Execução LocalPara executar este projeto no seu ambiente de desenvolvimento, siga os passos abaixo.Pré-requisitosNode.js (versão 18 ou superior)GitPassosClone o repositório:git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
+cd seu-repositorio
+Instale as dependências:npm install
+Configure as Variáveis de Ambiente:Crie um arquivo chamado .env.local na raiz do projeto.Dentro deste arquivo, adicione sua chave da API do Gemini:GEMINI_API_KEY=SUA_CHAVE_DA_API_VAI_AQUI
+Execute o servidor de desenvolvimento:npm run dev
+Abra http://localhost:3000 no seu navegador para ver a aplicação em funcionamento.☁️ Publicação (Deploy) na VercelA Vercel é a forma recomendada para publicar este projeto. O processo é automático.Envie seu código para o GitHub.Importe o projeto na Vercel: Conecte sua conta do GitHub na Vercel e importe o repositório da plataforma.Configure a Variável de Ambiente na Vercel:No painel do seu projeto na Vercel, vá para Settings > Environment Variables.Adicione a mesma variável que você usou localmente:Name: GEMINI_API_KEYValue: SUA_CHAVE_DA_API_VAI_AQUIFaça o Deploy: Clique em "Deploy". A Vercel irá construir e publicar seu site automaticamente. Qualquer git push futuro para a branch main irá acionar um novo deploy.🔄 Como Atualizar os MateriaisO fluxo de trabalho para adicionar ou alterar materiais é simples:Organize no Google Drive: Suba seus arquivos (PDFs, vídeos, imagens) para o Google Drive seguindo a estrutura de pastas recomendada. Lembre-se de configurar a partilha para "Qualquer pessoa com o link".Atualize os Links: Abra o arquivo data/materials.js e substitua os links de placeholder (/path/to/...) pelos novos links do Google Drive.Publique as Alterações: Envie as mudanças para o GitHub, e a Vercel cuidará do resto.git add .
+git commit -m "Atualiza links de materiais da seção X"
+git push

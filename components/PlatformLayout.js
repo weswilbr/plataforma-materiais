@@ -1,7 +1,8 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Componente principal do layout com novo design e correção para o menu no desktop.
+// Versão com o menu de produtos visualmente melhorado com imagens.
 
 import { useState } from 'react';
+import Image from 'next/image'; // Importa o componente de Imagem
 import { useAuth } from '../contexts/AuthContext';
 import InviteGenerator from './InviteGenerator';
 import WelcomeScreen from './WelcomeScreen';
@@ -11,9 +12,7 @@ import {
     RankingPresenter, ChannelsPresenter, MaterialCard, ArtsPresenter
 } from './MaterialPresenters';
 
-// Importa os dados necessários.
-import { marketingMaterials, rewardsMaterials, trainingMaterials, professionalTestimonials } from '../data/materials';
-
+import { materialsMap } from '../data/materials';
 
 const PlatformLayout = () => {
     const [activeCommand, setActiveCommand] = useState('inicio');
@@ -42,6 +41,7 @@ const PlatformLayout = () => {
     const menuItems = getMenuItems(user.role);
 
     const renderContent = () => {
+        // ... (código existente, sem alterações)
         switch (activeCommand) {
             case 'inicio': return <WelcomeScreen />;
             case 'convite': return <InviteGenerator />;
@@ -53,13 +53,13 @@ const PlatformLayout = () => {
             case 'fidelidade': return <LoyaltyPresenter />;
             case 'folheteria': return <BrochurePresenter />;
             case 'artes': return <ArtsPresenter />;
-            case 'marketingrede': return <MaterialViewer title={commandMap.marketingrede.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.values(marketingMaterials).map(item => <MaterialCard key={item.title} item={item} />)}</div></MaterialViewer>;
-            case 'recompensas2024': return <MaterialViewer title={commandMap.recompensas2024.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><MaterialCard item={rewardsMaterials.pdf} /></div></MaterialViewer>;
-            case 'treinamento': return <MaterialViewer title={commandMap.treinamento.title}><div className="space-y-6">{Object.entries(trainingMaterials).map(([category, items]) => (<div key={category}><h3 className="text-xl font-semibold mb-4">{category}</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{items.map(item => <MaterialCard key={item.title} item={{...item, description: `Baixe o arquivo: ${item.title}`}} />)}</div></div>))}</div></MaterialViewer>;
+            case 'marketingrede': return <MaterialViewer title={commandMap.marketingrede.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.values(materialsMap.marketingMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`marketingMaterials.${key}`} />)}</div></MaterialViewer>;
+            case 'recompensas2024': return <MaterialViewer title={commandMap.recompensas2024.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><MaterialCard item={materialsMap.rewardsMaterials.pdf} filePath="rewardsMaterials.pdf" /></div></MaterialViewer>;
+            case 'treinamento': return <MaterialViewer title={commandMap.treinamento.title}><div className="space-y-6">{Object.entries(materialsMap.trainingMaterials).map(([category, items]) => (<div key={category}><h3 className="text-xl font-semibold mb-4">{category}</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{items.map((item, index) => <MaterialCard key={item.title} item={{...item, description: `Baixe o arquivo: ${item.title}`}} filePath={`trainingMaterials.${category}[${index}]`} />)}</div></div>))}</div></MaterialViewer>;
             case 'tabelas': return <TablesPresenter />;
             case 'glossario': return <GlossaryPresenter />;
             case 'ranking': return <RankingPresenter />;
-            case 'profissionais': return <MaterialViewer title={commandMap.profissionais.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.values(professionalTestimonials).map(item => <MaterialCard key={item.title} item={item} />)}</div></MaterialViewer>;
+            case 'profissionais': return <MaterialViewer title={commandMap.profissionais.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.professionalTestimonials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`professionalTestimonials.${key}`} />)}</div></MaterialViewer>;
             case 'canais': return <ChannelsPresenter />;
             default: return <MaterialViewer title={commandMap[activeCommand]?.title || ''} />;
         }
@@ -71,43 +71,63 @@ const PlatformLayout = () => {
             
             <aside className={`fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-80 p-6 h-screen overflow-y-auto shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
                 <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Plataforma de Apoio</h1>
-                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
+                    <div className="flex justify-between items-center mb-2"><h1 className="text-2xl font-bold text-slate-900 dark:text-white">Plataforma de Apoio</h1><button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Bem-vindo, {user.name}!</p>
                     <nav className="space-y-6">
-                        {Object.entries(menuItems).map(([category, commands]) => (
-                            <div key={category}>
-                                <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">{category}</h2>
-                                <ul className="space-y-1">
-                                    {commands.map(command => (
-                                        <li key={command}>
-                                            <button 
-                                                onClick={() => { setActiveCommand(command); setIsSidebarOpen(false); }} 
-                                                className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-                                            >
-                                                {commandMap[command].title}
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        ))}
+                        {Object.entries(menuItems).map(([category, commands]) => {
+                             if (category === "💰 Produtos & Benefícios") {
+                                return (
+                                    <details key={category} className="group" open>
+                                        <summary className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 cursor-pointer list-none flex justify-between items-center">
+                                            {category}
+                                            <svg className="w-4 h-4 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        </summary>
+                                        <ul className="space-y-1 mt-2">
+                                             {commands.map(command => {
+                                                if(command === 'produtos'){
+                                                    return (
+                                                        <details key={command} className="group/submenu">
+                                                            <summary className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium flex justify-between items-center ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                                                                {commandMap[command].title}
+                                                                <svg className="w-4 h-4 transform group-open/submenu:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                            </summary>
+                                                            <ul className="space-y-1 pl-4 mt-2 border-l-2 border-slate-200 dark:border-slate-700">
+                                                                {materialsMap.individualProducts.map(product => (
+                                                                    <li key={product.id}>
+                                                                         <button onClick={() => { setActiveCommand('produtos'); setIsSidebarOpen(false); /* Adicionar lógica para mostrar este produto */ }} className="w-full text-left px-4 py-2 rounded-lg transition duration-200 text-sm flex items-center gap-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                                                            <Image src={product.image} alt={product.name} width={24} height={24} className="rounded-full" />
+                                                                            <span>{product.name}</span>
+                                                                        </button>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </details>
+                                                    )
+                                                }
+                                                return (
+                                                    <li key={command}><button onClick={() => { setActiveCommand(command); setIsSidebarOpen(false); }} className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>{commandMap[command].title}</button></li>
+                                                )
+                                             })}
+                                        </ul>
+                                    </details>
+                                )
+                             }
+                             return (
+                                <div key={category}>
+                                    <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">{category}</h2>
+                                    <ul className="space-y-1">
+                                        {commands.map(command => (<li key={command}><button onClick={() => { setActiveCommand(command); setIsSidebarOpen(false); }} className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>{commandMap[command].title}</button></li>))}
+                                    </ul>
+                                </div>
+                            )
+                        })}
                     </nav>
                 </div>
                 <button onClick={logout} className="w-full mt-6 text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50">Sair da Conta</button>
             </aside>
             
             <main className="md:ml-80 p-6 md:p-10 h-screen overflow-y-auto">
-                 <header className="md:hidden flex justify-between items-center mb-6 sticky top-0 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm -mx-6 px-6 py-4 z-10 border-b border-slate-200 dark:border-slate-700">
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">{commandMap[activeCommand]?.title}</h1>
-                    <button onClick={() => setIsSidebarOpen(true)} className="p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700">
-                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                    </button>
-                 </header>
+                 <header className="md:hidden flex justify-between items-center mb-6 sticky top-0 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm -mx-6 px-6 py-4 z-10 border-b border-slate-200 dark:border-slate-700"><h1 className="text-xl font-bold text-slate-900 dark:text-white">{commandMap[activeCommand]?.title}</h1><button onClick={() => setIsSidebarOpen(true)} className="p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button></header>
                  <div className="animate-fade-in">
                     {renderContent()}
                  </div>
