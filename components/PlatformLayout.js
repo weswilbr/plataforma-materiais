@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Versão com menus recolhidos por padrão e navegação direta para produtos.
+// Versão final com novo design, menus recolhidos e navegação direta para produtos.
 
 import { useState } from 'react';
 import Image from 'next/image';
@@ -16,13 +16,33 @@ import { materialsMap } from '../data/materials';
 
 const PlatformLayout = () => {
     const [activeCommand, setActiveCommand] = useState('inicio');
-    const [selectedProductId, setSelectedProductId] = useState(null); // Novo estado para o produto selecionado
+    const [selectedProductId, setSelectedProductId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { user, logout } = useAuth();
 
     const commandMap = {
-        'inicio': { title: 'Início' }, 'marketingrede': { title: 'Marketing de Rede' }, 'apresentacao': { title: 'Apresentação da Oportunidade' }, 'recompensas2024': { title: 'Plano de Recompensas' }, 'bonusconstrutor': { title: 'Bônus Construtor' }, 'treinamento': { title: 'Treinamentos' }, 'ranking': { title: 'Ranking' }, 'glossario': { title: 'Glossário' }, 'tabelas': { title: 'Tabelas' }, 'produtos': { title: 'Produtos' }, 'fabrica4life': { title: 'Fábrica 4LIFE' }, 'fatorestransferencia': { title: 'Fatores de Transferência' }, 'profissionais': { title: 'Profissionais de Saúde' }, 'fidelidade': { title: 'Programa de Fidelidade' }, 'loja': { title: 'Loja Personalizada' }, 'folheteria': { title: 'Folheteria' }, 'artes': { title: 'Criação de Artes' }, 'canais': { title: 'Canais' }, 'convite': { title: 'Gerador de Convites' },
-        'admin_panel': { title: 'Painel de Controle' }, 'manage_users': { title: 'Gerenciar Usuários' }, 'view_stats': { title: 'Ver Estatísticas' }
+        'inicio': { title: 'Início' },
+        'convite': { title: 'Gerador de Convites' },
+        'ranking': { title: 'Ranking' },
+        'apresentacao': { title: 'Apresentação da Oportunidade' },
+        'marketingrede': { title: 'Marketing de Rede' },
+        'recompensas2024': { title: 'Plano de Recompensas' },
+        'bonusconstrutor': { title: 'Bônus Construtor' },
+        'treinamento': { title: 'Treinamentos' },
+        'produtos': { title: 'Produtos' },
+        'fatorestransferencia': { title: 'Fatores de Transferência' },
+        'profissionais': { title: 'Profissionais de Saúde' },
+        'fabrica4life': { title: 'Fábrica 4LIFE' },
+        'fidelidade': { title: 'Programa de Fidelidade' },
+        'glossario': { title: 'Glossário' },
+        'tabelas': { title: 'Tabelas' },
+        'loja': { title: 'Loja Personalizada' },
+        'folheteria': { title: 'Folheteria' },
+        'artes': { title: 'Criação de Artes' },
+        'canais': { title: 'Canais' },
+        'admin_panel': { title: 'Painel de Controle' },
+        'manage_users': { title: 'Gerenciar Usuários' },
+        'view_stats': { title: 'Ver Estatísticas' }
     };
 
     const getMenuItems = (role) => {
@@ -49,7 +69,7 @@ const PlatformLayout = () => {
 
     const handleMenuClick = (command) => {
         setActiveCommand(command);
-        setSelectedProductId(null); // Reseta a seleção de produto ao mudar de seção
+        setSelectedProductId(null);
         setIsSidebarOpen(false);
     };
 
@@ -85,7 +105,12 @@ const PlatformLayout = () => {
             
             <aside className={`fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-80 p-6 h-screen overflow-y-auto shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
                 <div>
-                    <div className="flex justify-between items-center mb-2"><h1 className="text-2xl font-bold text-slate-900 dark:text-white">Plataforma de Apoio</h1><button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>
+                    <div className="flex justify-between items-center mb-2">
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Plataforma de Apoio</h1>
+                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Bem-vindo, {user.name}!</p>
                     <nav className="space-y-6">
                         {Object.entries(menuItems).map(([category, commands]) => {
