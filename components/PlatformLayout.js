@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Versão com a lógica de navegação direta para os produtos.
+// Versão com menus recolhidos por padrão e navegação direta para produtos.
 
 import { useState } from 'react';
 import Image from 'next/image';
@@ -55,7 +55,7 @@ const PlatformLayout = () => {
 
     const renderContent = () => {
         if (activeCommand === 'produtos') {
-            return <ProductBrowser key={selectedProductId} initialProductId={selectedProductId} />;
+            return <ProductBrowser key={selectedProductId} initialProductId={selectedProductId} onBack={() => handleMenuClick('inicio')} />;
         }
         switch (activeCommand) {
             case 'inicio': return <WelcomeScreen />;
@@ -91,7 +91,7 @@ const PlatformLayout = () => {
                         {Object.entries(menuItems).map(([category, commands]) => {
                              if (category === "💰 Produtos & Benefícios") {
                                 return (
-                                    <details key={category} className="group" open>
+                                    <details key={category} className="group">
                                         <summary className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 cursor-pointer list-none flex justify-between items-center">
                                             {category}
                                             <svg className="w-4 h-4 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -100,7 +100,7 @@ const PlatformLayout = () => {
                                              {commands.map(command => {
                                                 if(command === 'produtos'){
                                                     return (
-                                                        <details key={command} className="group/submenu" open>
+                                                        <details key={command} className="group/submenu">
                                                             <summary className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium flex justify-between items-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700`}>
                                                                 {commandMap[command].title}
                                                                 <svg className="w-4 h-4 transform group-open/submenu:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
