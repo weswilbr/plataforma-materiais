@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/MaterialPresenters.js
-// Agrupa todos os componentes de materiais com a nova paleta de cores.
+// Versão com a correção que torna os botões de materiais dos produtos (como "Perfil") clicáveis.
 
 import { useState } from 'react';
 import {
@@ -12,7 +12,7 @@ import {
 // --- COMPONENTES AUXILIARES ---
 
 export const MaterialViewer = ({ title, children }) => (
-    <div className="animate-fade-in">
+    <div>
         <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">{title}</h2>
         {children ? (
             <div className="bg-white dark:bg-indigo-900 p-6 rounded-lg shadow-lg">
@@ -44,7 +44,6 @@ export const MaterialCard = ({ item }) => {
 
 // --- COMPONENTES PRINCIPAIS DE CONTEÚDO ---
 
-// ... (Todos os outros componentes como ArtsPresenter, BrochurePresenter, etc., continuam aqui com o novo estilo)
 export const ArtsPresenter = () => {
     const [view, setView] = useState('main'); // main, criativos
 
@@ -86,7 +85,6 @@ export const ArtsPresenter = () => {
     return <div>{renderContentByView()}</div>;
 };
 
-// ... (Restante dos componentes como BrochurePresenter, LoyaltyPresenter, etc. com as cores atualizadas)
 
 export const BrochurePresenter = () => {
     const [view, setView] = useState('main'); // 'main' or 'panfletos'
@@ -151,15 +149,14 @@ export const ProductBrowser = () => {
     const handleGeneratePitchClick = async (productId, productName) => { setIsPitchLoading(productId); const prompt = `Gere 3 opções distintas de copy de anúncio para tráfego pago, em português do Brasil, para o produto "${productName}". Cada opção deve ser curta (2-3 frases), persuasiva, usar emojis ✨ e ter uma chamada para ação clara como "Saiba Mais". Separe as 3 opções EXATAMENTE com '|||' e não adicione nenhum texto introdutório, numeração ou títulos.`; const result = await callApi(prompt); const resultsArray = result.split('|||').map(s => s.trim()).filter(Boolean); setGeneratedPitches(prev => ({ ...prev, [productId]: resultsArray })); setIsPitchLoading(null); };
     const handleCopyPitch = (textToCopy, productId, index) => { navigator.clipboard.writeText(textToCopy); const key = `${productId}-${index}`; setPitchCopyButtonText(prev => ({ ...prev, [key]: 'Copiado!' })); setTimeout(() => setPitchCopyButtonText(prev => ({ ...prev, [key]: 'Copiar' })), 2000); };
     const handleProductSelect = (productId) => { const product = productData[productId] || { name: individualProducts.find(p => p.id === productId)?.name, options: [] }; setSelectedProduct({ id: productId, ...product }); setView('product_detail'); };
-    const renderContent = (option) => { const contentInfo = selectedProduct.content?.[option] || { type: 'text', text: 'Conteúdo para esta opção ainda não foi adicionado.' }; return (<div className="mt-4 p-4 bg-slate-200 dark:bg-indigo-700/50 rounded-lg"><h4 className="font-bold capitalize">{option.replace('_', ' ')}</h4><p>{contentInfo.text}</p></div>); };
-
+    
     if (view === 'product_detail') {
         return (
             <div>
                 <button onClick={() => setView('individual_products')} className="mb-6 bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition">&larr; Voltar para a Lista de Produtos</button>
                 <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">{selectedProduct.name}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {selectedProduct.options.length > 0 ? selectedProduct.options.map(option => {
+                    {selectedProduct.options.map(option => {
                         if (option === 'pitch_venda') {
                             const pitches = Array.isArray(generatedPitches[selectedProduct.id]) ? generatedPitches[selectedProduct.id] : [];
                             return (
@@ -172,8 +169,27 @@ export const ProductBrowser = () => {
                                 </div>
                             );
                         }
-                        return (<div key={option} className="bg-white dark:bg-indigo-800 p-4 rounded-lg shadow-md"><h3 className="font-semibold text-lg capitalize dark:text-white">{option.replace(/_/g, ' ')}</h3>{renderContent(option)}</div>);
-                    }) : <p>Nenhum material disponível para este produto ainda.</p>}
+                        
+                        // [CORREÇÃO] Gera um MaterialCard para cada opção de material
+                        const contentInfo = selectedProduct.content?.[option];
+                        if(contentInfo) {
+                            const materialItem = {
+                                type: contentInfo.type || 'file',
+                                title: option.charAt(0).toUpperCase() + option.slice(1).replace('_', ' '),
+                                description: `Acesse o material: ${option.replace(/_/g, ' ')}`,
+                                url: contentInfo.url || '#'
+                            };
+                            return <MaterialCard key={option} item={materialItem} />;
+                        } else {
+                            // Renderiza um card inativo se não houver conteúdo definido
+                            return (
+                                <div key={option} className="p-6 bg-slate-100 dark:bg-slate-700/50 rounded-lg shadow-md text-left opacity-60">
+                                    <h3 className="font-semibold text-lg capitalize dark:text-white">{option.replace(/_/g, ' ')}</h3>
+                                    <p className="mt-2 text-slate-600 dark:text-slate-400">Conteúdo para esta opção ainda não foi adicionado.</p>
+                                </div>
+                            );
+                        }
+                    })}
                 </div>
             </div>
         );
