@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/MaterialPresenters.js
-// Versão final com todos os componentes de materiais e correções de bugs.
+// Versão com o ProductBrowser simplificado e botões de Voltar consistentes.
 
 import { useState, useEffect } from 'react';
 import { materialsMap } from '../data/materials';
@@ -133,7 +133,7 @@ export const FactoryPresenter = () => (
     </div>
 );
 
-export const ProductBrowser = ({ initialProductId }) => {
+export const ProductBrowser = ({ initialProductId, onBack }) => {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [generatedPitches, setGeneratedPitches] = useState({});
     const [isPitchLoading, setIsPitchLoading] = useState(null);
@@ -163,7 +163,10 @@ export const ProductBrowser = ({ initialProductId }) => {
 
     return (
         <div>
-            <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">{selectedProduct.name}</h2>
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-200">{selectedProduct.name}</h2>
+                <button onClick={onBack} className="bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition">&larr; Voltar ao Início</button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {selectedProduct.options.map(option => {
                     if (option === 'pitch_venda') {
