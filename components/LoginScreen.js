@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/LoginScreen.js
-// Tela de Login com a nova paleta de cores e visualizador de senha.
+// Tela de Login com layout full-screen para mobile e visualizador de senha.
 
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,14 +27,14 @@ const LoginScreen = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [showPassword, setShowPassword] = useState(false); // Novo estado
+    const [showPassword, setShowPassword] = useState(false);
     const { login } = useAuth();
 
     const handleSubmit = (e) => { e.preventDefault(); setError(''); const success = login(username, password); if (!success) { setError('Nome de usuário ou senha inválidos.'); } };
     
     return (
         <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-indigo-950">
-            <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-indigo-900 rounded-xl shadow-2xl">
+            <div className="w-full min-h-screen p-8 space-y-8 bg-white dark:bg-indigo-900 flex flex-col justify-center md:min-h-0 md:w-full md:max-w-md md:h-auto md:rounded-xl md:shadow-2xl">
                 <div className="text-center">
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Bem-vindo à Plataforma</h1>
                     <p className="mt-2 text-slate-600 dark:text-slate-400">Faça login para continuar</p>

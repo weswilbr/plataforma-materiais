@@ -57,7 +57,6 @@ export const MaterialCard = ({ item, filePath }) => {
     );
 };
 
-
 // --- COMPONENTES PRINCIPAIS DE CONTEÚDO ---
 
 export const ArtsPresenter = () => {
