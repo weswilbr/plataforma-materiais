@@ -1,8 +1,8 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Versão com o menu de produtos visualmente melhorado com imagens.
+// Versão com a lógica de navegação direta para os produtos.
 
 import { useState } from 'react';
-import Image from 'next/image'; // Importa o componente de Imagem
+import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import InviteGenerator from './InviteGenerator';
 import WelcomeScreen from './WelcomeScreen';
@@ -16,6 +16,7 @@ import { materialsMap } from '../data/materials';
 
 const PlatformLayout = () => {
     const [activeCommand, setActiveCommand] = useState('inicio');
+    const [selectedProductId, setSelectedProductId] = useState(null); // Novo estado para o produto selecionado
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { user, logout } = useAuth();
 
@@ -40,12 +41,25 @@ const PlatformLayout = () => {
     
     const menuItems = getMenuItems(user.role);
 
+    const handleProductClick = (productId) => {
+        setActiveCommand('produtos');
+        setSelectedProductId(productId);
+        setIsSidebarOpen(false);
+    };
+
+    const handleMenuClick = (command) => {
+        setActiveCommand(command);
+        setSelectedProductId(null); // Reseta a seleção de produto ao mudar de seção
+        setIsSidebarOpen(false);
+    };
+
     const renderContent = () => {
-        // ... (código existente, sem alterações)
+        if (activeCommand === 'produtos') {
+            return <ProductBrowser key={selectedProductId} initialProductId={selectedProductId} />;
+        }
         switch (activeCommand) {
             case 'inicio': return <WelcomeScreen />;
             case 'convite': return <InviteGenerator />;
-            case 'produtos': return <ProductBrowser />;
             case 'apresentacao': return <OpportunityPresenter />;
             case 'bonusconstrutor': return <BonusBuilderPresenter />;
             case 'fabrica4life': return <FactoryPresenter />;
@@ -53,7 +67,7 @@ const PlatformLayout = () => {
             case 'fidelidade': return <LoyaltyPresenter />;
             case 'folheteria': return <BrochurePresenter />;
             case 'artes': return <ArtsPresenter />;
-            case 'marketingrede': return <MaterialViewer title={commandMap.marketingrede.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.values(materialsMap.marketingMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`marketingMaterials.${key}`} />)}</div></MaterialViewer>;
+            case 'marketingrede': return <MaterialViewer title={commandMap.marketingrede.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.marketingMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`marketingMaterials.${key}`} />)}</div></MaterialViewer>;
             case 'recompensas2024': return <MaterialViewer title={commandMap.recompensas2024.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><MaterialCard item={materialsMap.rewardsMaterials.pdf} filePath="rewardsMaterials.pdf" /></div></MaterialViewer>;
             case 'treinamento': return <MaterialViewer title={commandMap.treinamento.title}><div className="space-y-6">{Object.entries(materialsMap.trainingMaterials).map(([category, items]) => (<div key={category}><h3 className="text-xl font-semibold mb-4">{category}</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{items.map((item, index) => <MaterialCard key={item.title} item={{...item, description: `Baixe o arquivo: ${item.title}`}} filePath={`trainingMaterials.${category}[${index}]`} />)}</div></div>))}</div></MaterialViewer>;
             case 'tabelas': return <TablesPresenter />;
@@ -86,16 +100,16 @@ const PlatformLayout = () => {
                                              {commands.map(command => {
                                                 if(command === 'produtos'){
                                                     return (
-                                                        <details key={command} className="group/submenu">
-                                                            <summary className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium flex justify-between items-center ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                                                        <details key={command} className="group/submenu" open>
+                                                            <summary className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium flex justify-between items-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700`}>
                                                                 {commandMap[command].title}
                                                                 <svg className="w-4 h-4 transform group-open/submenu:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                                             </summary>
                                                             <ul className="space-y-1 pl-4 mt-2 border-l-2 border-slate-200 dark:border-slate-700">
                                                                 {materialsMap.individualProducts.map(product => (
                                                                     <li key={product.id}>
-                                                                         <button onClick={() => { setActiveCommand('produtos'); setIsSidebarOpen(false); /* Adicionar lógica para mostrar este produto */ }} className="w-full text-left px-4 py-2 rounded-lg transition duration-200 text-sm flex items-center gap-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">
-                                                                            <Image src={product.image} alt={product.name} width={24} height={24} className="rounded-full" />
+                                                                         <button onClick={() => handleProductClick(product.id)} className={`w-full text-left px-4 py-2 rounded-lg transition duration-200 text-sm flex items-center gap-3 ${selectedProductId === product.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'} hover:bg-slate-100 dark:hover:bg-slate-700`}>
+                                                                            <Image src={product.image} alt={product.name} width={24} height={24} className="rounded-full bg-slate-200" />
                                                                             <span>{product.name}</span>
                                                                         </button>
                                                                     </li>
@@ -105,7 +119,7 @@ const PlatformLayout = () => {
                                                     )
                                                 }
                                                 return (
-                                                    <li key={command}><button onClick={() => { setActiveCommand(command); setIsSidebarOpen(false); }} className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>{commandMap[command].title}</button></li>
+                                                    <li key={command}><button onClick={() => handleMenuClick(command)} className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>{commandMap[command].title}</button></li>
                                                 )
                                              })}
                                         </ul>
@@ -116,7 +130,7 @@ const PlatformLayout = () => {
                                 <div key={category}>
                                     <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">{category}</h2>
                                     <ul className="space-y-1">
-                                        {commands.map(command => (<li key={command}><button onClick={() => { setActiveCommand(command); setIsSidebarOpen(false); }} className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>{commandMap[command].title}</button></li>))}
+                                        {commands.map(command => (<li key={command}><button onClick={() => handleMenuClick(command)} className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>{commandMap[command].title}</button></li>))}
                                     </ul>
                                 </div>
                             )
