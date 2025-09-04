@@ -1,60 +1,42 @@
 // NOME DO ARQUIVO: pages/api/download.js
-// Esta API atua como um proxy seguro para forçar o download direto de arquivos do Google Drive.
+// Esta API atua como um proxy seguro para forçar o download direto de arquivos.
 
 import { materialsMap } from '../../data/materials';
 
-export default async function handler(request, response) {
-    const { fileKey } = request.query;
+// Função para resolver um caminho de string (ex: "opportunityMaterials.video_completo") em um objeto.
+const resolvePath = (path, obj) => {
+    return path.split('.').reduce((prev, curr) => {
+        return prev ? prev[curr] : null;
+    }, obj || self);
+};
 
-    if (!fileKey) {
-        return response.status(400).json({ error: 'A chave do arquivo é obrigatória.' });
+export default async function handler(request, response) {
+    const { path } = request.query;
+
+    if (!path) {
+        return response.status(400).json({ error: 'O caminho do arquivo é obrigatório.' });
     }
 
-    // Procura o arquivo em todos os materiais
-    let fileUrl = null;
-    let fileName = 'download'; // Nome padrão
+    const fileData = resolvePath(path, materialsMap);
 
-    const findFile = (obj) => {
-        for (const key in obj) {
-            if (key === fileKey && obj[key].url) {
-                fileUrl = obj[key].url;
-                fileName = obj[key].title || fileKey;
-                return true;
-            }
-            if (typeof obj[key] === 'object' && obj[key] !== null) {
-                if (findFile(obj[key])) return true;
-            }
-        }
-        return false;
-    };
-
-    findFile(materialsMap);
-
-    if (!fileUrl || !fileUrl.includes('drive.google.com')) {
-        return response.status(404).json({ error: 'Arquivo não encontrado ou não é um link do Google Drive.' });
+    if (!fileData || !fileData.url || !fileData.url.includes('drive.google.com')) {
+        return response.status(404).json({ error: `Arquivo não encontrado ou não é um link válido do Google Drive para o caminho: ${path}` });
     }
 
     try {
         // Extrai o ID do arquivo do link do Google Drive
-        const fileId = fileUrl.split('/d/')[1].split('/')[0];
+        const fileId = fileData.url.split('/d/')[1].split('/')[0];
         const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
 
-        // Busca o arquivo do Google Drive
+        // Busca o arquivo do Google Drive a partir do servidor
         const fileResponse = await fetch(directDownloadUrl);
 
         if (!fileResponse.ok) {
             throw new Error('Falha ao buscar o arquivo do Google Drive.');
         }
 
-        // Obtém o nome do arquivo do cabeçalho, se disponível
-        const disposition = fileResponse.headers.get('content-disposition');
-        if (disposition && disposition.indexOf('attachment') !== -1) {
-            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-            const matches = filenameRegex.exec(disposition);
-            if (matches != null && matches[1]) {
-                fileName = matches[1].replace(/['"]/g, '');
-            }
-        }
+        // Tenta obter um nome de arquivo mais descritivo
+        let fileName = fileData.title ? `${fileData.title}.${fileData.url.split('.').pop()}` : path.split('.').pop();
 
         // Define os cabeçalhos para forçar o download no navegador do usuário
         response.setHeader('Content-Type', fileResponse.headers.get('content-type') || 'application/octet-stream');
@@ -69,3 +51,4 @@ export default async function handler(request, response) {
         response.status(500).json({ error: 'Não foi possível processar o download.' });
     }
 }
+
