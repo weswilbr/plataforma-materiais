@@ -1,8 +1,18 @@
 // NOME DO ARQUIVO: components/MaterialPresenters.js
-// Versão com o ProductBrowser simplificado e botões de Voltar consistentes.
+// Versão final com todos os componentes de materiais, novo design e correções de bugs.
 
 import { useState, useEffect } from 'react';
 import { materialsMap } from '../data/materials';
+
+// --- ÍCONES SVG ---
+const VideoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>;
+const PdfIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M4 12V4a2 2 0 0 1 2-2h8l4 4v4"></path><path d="M4 20h1.5a1.5 1.5 0 0 0 0-3H4v3Z"></path><path d="M14.5 20h1a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2h-1v5Z"></path><path d="M10 15h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v-6Z"></path></svg>;
+const PptIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2Z"></path><path d="M4 15h16"></path><path d="M8 11h.01"></path><path d="M12 11h.01"></path><path d="M16 11h.01"></path><path d="M8 7h.01"></path><path d="M12 7h.01"></path><path d="M16 7h.01"></path></svg>;
+const YoutubeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 15v-6l5 3-5 3Z"></path><path d="M2.5 17a24.12 24.12 0 0 1 0-10C2.5 6 7 4 12 4s9.5 2 9.5 3a24.12 24.12 0 0 1 0 10c0 1-4.5 3-9.5 3s-9.5-2-9.5-3Z"></path></svg>;
+const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>;
+const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
+const DefaultIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z"></path><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg>;
+
 
 // --- COMPONENTES AUXILIARES ---
 
@@ -21,13 +31,13 @@ export const MaterialViewer = ({ title, children }) => (
 
 export const MaterialCard = ({ item, filePath }) => {
     const getIcon = (type, title) => {
-        if (title.toLowerCase().includes('vídeo')) return '🎬';
-        if (title.toLowerCase().includes('pdf') || title.toLowerCase().includes('guia')) return '📄';
-        if (title.toLowerCase().includes('powerpoint')) return '📊';
-        if (title.toLowerCase().includes('youtube')) return '▶️';
-        if (type === 'link') return '🔗';
-        if (type === 'file') return '💾';
-        return '❓';
+        if (title.toLowerCase().includes('vídeo')) return <VideoIcon />;
+        if (title.toLowerCase().includes('pdf') || title.toLowerCase().includes('guia')) return <PdfIcon />;
+        if (title.toLowerCase().includes('powerpoint')) return <PptIcon />;
+        if (title.toLowerCase().includes('youtube')) return <YoutubeIcon />;
+        if (type === 'link') return <LinkIcon />;
+        if (type === 'file') return <DownloadIcon />;
+        return <DefaultIcon />;
     };
 
     const url = item.type === 'file' ? `/api/download?path=${filePath}` : item.url;
@@ -35,12 +45,18 @@ export const MaterialCard = ({ item, filePath }) => {
     const downloadAttribute = item.type === 'file' ? {} : { download: true };
 
     return (
-        <a href={url} target={target} rel="noopener noreferrer" {...downloadAttribute} className="p-6 bg-white dark:bg-indigo-800 rounded-lg shadow-lg text-left hover:shadow-xl hover:scale-105 transition-transform flex items-start space-x-4">
-            <span className="text-4xl">{getIcon(item.type, item.title)}</span>
-            <div><h3 className="text-xl font-bold text-slate-900 dark:text-white">{item.title}</h3><p className="mt-1 text-slate-600 dark:text-slate-400">{item.description}</p></div>
+        <a href={url} target={target} rel="noopener noreferrer" {...downloadAttribute} className="group p-6 bg-white dark:bg-indigo-800 rounded-lg shadow-lg text-left hover:shadow-xl hover:scale-105 transition-transform flex items-start space-x-4">
+            <div className="text-blue-500 dark:text-blue-400 mt-1">
+                {getIcon(item.type, item.title)}
+            </div>
+            <div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.title}</h3>
+                <p className="mt-1 text-slate-600 dark:text-slate-400">{item.description}</p>
+            </div>
         </a>
     );
 };
+
 
 // --- COMPONENTES PRINCIPAIS DE CONTEÚDO ---
 
@@ -79,7 +95,6 @@ export const ArtsPresenter = () => {
         </div>
     );
 };
-
 
 export const BrochurePresenter = () => {
     const [view, setView] = useState('main');
