@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: contexts/AuthContext.js
-// Lógica de autenticação agora integrada com o Firebase.
+// Lógica de autenticação integrada com o Firebase, corrigida para gerir o estado de loading.
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
@@ -14,12 +14,12 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); // Estado para gerir o carregamento inicial
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                // Busca o perfil do usuário no Firestore para obter a "role"
+                // Se houver um utilizador no Firebase, busca o perfil dele no Firestore
                 const userDocRef = doc(db, "users", firebaseUser.uid);
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
@@ -29,13 +29,14 @@ export function AuthProvider({ children }) {
                         ...userDoc.data()
                     });
                 } else {
-                    // Usuário autenticado mas sem perfil no Firestore (caso de erro)
+                    // Caso de erro: utilizador autenticado mas sem perfil
+                    console.error("Utilizador autenticado mas sem perfil no Firestore.");
                     setUser(null);
                 }
             } else {
                 setUser(null);
             }
-            setLoading(false);
+            setLoading(false); // Finaliza o carregamento após verificar
         });
 
         return () => unsubscribe();
@@ -43,7 +44,6 @@ export function AuthProvider({ children }) {
 
     const login = async (email, password) => {
         try {
-            // Para o login, usamos emails (ex: admin@equipe.com) e senhas
             await signInWithEmailAndPassword(auth, email, password);
             return true;
         } catch (error) {
@@ -60,7 +60,7 @@ export function AuthProvider({ children }) {
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 }
