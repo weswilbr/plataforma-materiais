@@ -2,12 +2,12 @@
 // Centraliza todos os dados e links de materiais da plataforma.
 
 export const professionalTestimonials = {
-    'dra_lorenlay_rachid': { type: 'file', title: 'Dra. Lorenlay Rachid', url: '/path/to/video.mp4' },
-    'dra_stella': { type: 'file', title: 'Dra. Stella', url: '/path/to/video.mp4' },
-    'dr_nelson_annunciato': { type: 'file', title: 'Dr. Nelson Annunciato', url: '/path/to/video.mp4' },
-    'dr_kleiner': { type: 'file', title: 'Dr. Kleiner', url: '/path/to/video.mp4' },
-    'dr_gino': { type: 'file', title: 'Dr. Gino', url: '/path/to/video.mp4' },
-    'dr_flavio': { type: 'file', title: 'Dr. Flavio', url: '/path/to/video.mp4' },
+    'dra_lorenlay_rachid': { type: 'file', title: 'Dra. Lorenlay Rachid', description: 'Baixe o vídeo.', url: '/path/to/video.mp4' },
+    'dra_stella': { type: 'file', title: 'Dra. Stella', description: 'Baixe o vídeo.', url: '/path/to/video.mp4' },
+    'dr_nelson_annunciato': { type: 'file', title: 'Dr. Nelson Annunciato', description: 'Baixe o vídeo.', url: '/path/to/video.mp4' },
+    'dr_kleiner': { type: 'file', title: 'Dr. Kleiner', description: 'Baixe o vídeo.', url: '/path/to/video.mp4' },
+    'dr_gino': { type: 'file', title: 'Dr. Gino', description: 'Baixe o vídeo.', url: '/path/to/video.mp4' },
+    'dr_flavio': { type: 'file', title: 'Dr. Flavio', description: 'Baixe o vídeo.', url: '/path/to/video.mp4' },
 };
 
 export const channels = {
@@ -149,5 +149,26 @@ export const artsMaterials = {
         carrossel: { type: 'file', title: 'Carrossel', description: 'Exemplo de carrossel para redes sociais.', url: '/path/to/your/criativo_carrossel.zip' },
         video_curto: { type: 'file', title: 'Vídeo Curto', description: 'Modelo de vídeo para Reels ou Stories.', url: '/path/to/your/criativo_video.mp4' },
     }
+};
+
+// AGRUPAMENTO DE TODOS OS MATERIAIS
+export const materialsMap = {
+    professionalTestimonials,
+    channels,
+    positionsData,
+    glossaryTerms,
+    tablesMaterials,
+    trainingMaterials,
+    rewardsMaterials,
+    marketingMaterials,
+    brochureMaterials,
+    loyaltyMaterials,
+    transferFactorMaterials,
+    factoryMaterials,
+    productData,
+    individualProducts,
+    opportunityMaterials,
+    bonusBuilderMaterials,
+    artsMaterials,
 };
 

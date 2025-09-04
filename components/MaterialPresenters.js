@@ -1,18 +1,13 @@
 // NOME DO ARQUIVO: components/MaterialPresenters.js
-// Versão com a correção que torna os botões de materiais dos produtos (como "Perfil") clicáveis.
+// Versão com o MaterialCard e todos os componentes atualizados para usar a nova API de download.
 
 import { useState } from 'react';
-import {
-    professionalTestimonials, channels, positionsData, glossaryTerms, tablesMaterials,
-    trainingMaterials, rewardsMaterials, marketingMaterials, brochureMaterials,
-    loyaltyMaterials, transferFactorMaterials, factoryMaterials, productData, individualProducts,
-    opportunityMaterials, bonusBuilderMaterials, artsMaterials
-} from '../data/materials';
+import { materialsMap } from '../data/materials';
 
 // --- COMPONENTES AUXILIARES ---
 
 export const MaterialViewer = ({ title, children }) => (
-    <div>
+    <div className="animate-fade-in">
         <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">{title}</h2>
         {children ? (
             <div className="bg-white dark:bg-indigo-900 p-6 rounded-lg shadow-lg">
@@ -24,7 +19,7 @@ export const MaterialViewer = ({ title, children }) => (
     </div>
 );
 
-export const MaterialCard = ({ item }) => {
+export const MaterialCard = ({ item, filePath }) => {
     const getIcon = (type, title) => {
         if (title.toLowerCase().includes('vídeo')) return '🎬';
         if (title.toLowerCase().includes('pdf') || title.toLowerCase().includes('guia')) return '📄';
@@ -34,8 +29,13 @@ export const MaterialCard = ({ item }) => {
         if (type === 'file') return '💾';
         return '❓';
     };
+
+    const url = item.type === 'file' ? `/api/download?path=${filePath}` : item.url;
+    const target = item.type === 'link' ? '_blank' : '_self';
+    const downloadAttribute = item.type === 'file' ? {} : { download: true };
+
     return (
-        <a href={item.url} target="_blank" rel="noopener noreferrer" download={item.type === 'file'} className="p-6 bg-white dark:bg-indigo-800 rounded-lg shadow-lg text-left hover:shadow-xl hover:scale-105 transition-transform flex items-start space-x-4">
+        <a href={url} target={target} rel="noopener noreferrer" {...downloadAttribute} className="p-6 bg-white dark:bg-indigo-800 rounded-lg shadow-lg text-left hover:shadow-xl hover:scale-105 transition-transform flex items-start space-x-4">
             <span className="text-4xl">{getIcon(item.type, item.title)}</span>
             <div><h3 className="text-xl font-bold text-slate-900 dark:text-white">{item.title}</h3><p className="mt-1 text-slate-600 dark:text-slate-400">{item.description}</p></div>
         </a>
@@ -45,56 +45,51 @@ export const MaterialCard = ({ item }) => {
 // --- COMPONENTES PRINCIPAIS DE CONTEÚDO ---
 
 export const ArtsPresenter = () => {
-    const [view, setView] = useState('main'); // main, criativos
+    const [view, setView] = useState('main');
 
-    const renderContentByView = () => {
-        switch (view) {
-            case 'criativos':
-                return (
-                    <>
-                        <button onClick={() => setView('main')} className="mb-6 bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition">&larr; Voltar ao Menu de Artes</button>
-                        <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Modelos de Criativos</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <MaterialCard item={artsMaterials.criativos.imagem_estatica} />
-                            <MaterialCard item={artsMaterials.criativos.carrossel} />
-                            <MaterialCard item={artsMaterials.criativos.video_curto} />
-                        </div>
-                    </>
-                );
-            case 'main':
-            default:
-                return (
-                    <>
-                        <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Criação de Artes</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <MaterialCard item={artsMaterials.artes_fixas.arte_camiseta} />
-                            <MaterialCard item={artsMaterials.artes_fixas.banner_produtos} />
-                            <button onClick={() => setView('criativos')} className="p-8 bg-white dark:bg-indigo-800 rounded-lg shadow-lg text-left hover:shadow-xl hover:scale-105 transition-transform flex items-start space-x-4">
-                                <span className="text-4xl">💡</span>
-                                <div>
-                                    <h3 className="text-2xl font-bold dark:text-white">Criativos (Modelos)</h3>
-                                    <p className="mt-2 text-slate-600 dark:text-slate-400">Veja modelos de imagens, carrosséis e vídeos.</p>
-                                </div>
-                            </button>
-                        </div>
-                    </>
-                );
-        }
-    };
+    if (view === 'criativos') {
+        return (
+            <div>
+                <button onClick={() => setView('main')} className="mb-6 bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition">&larr; Voltar ao Menu de Artes</button>
+                <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Modelos de Criativos</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Object.entries(materialsMap.artsMaterials.criativos).map(([key, item]) => 
+                        <MaterialCard key={item.title} item={item} filePath={`artsMaterials.criativos.${key}`} />
+                    )}
+                </div>
+            </div>
+        );
+    }
 
-    return <div>{renderContentByView()}</div>;
+    return (
+        <div>
+            <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Criação de Artes</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Object.entries(materialsMap.artsMaterials.artes_fixas).map(([key, item]) => 
+                    <MaterialCard key={item.title} item={item} filePath={`artsMaterials.artes_fixas.${key}`} />
+                )}
+                <button onClick={() => setView('criativos')} className="p-8 bg-white dark:bg-indigo-800 rounded-lg shadow-lg text-left hover:shadow-xl hover:scale-105 transition-transform flex items-start space-x-4">
+                    <span className="text-4xl">💡</span>
+                    <div>
+                        <h3 className="text-2xl font-bold dark:text-white">Criativos (Modelos)</h3>
+                        <p className="mt-2 text-slate-600 dark:text-slate-400">Veja modelos de imagens, carrosséis e vídeos.</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+    );
 };
 
 
 export const BrochurePresenter = () => {
-    const [view, setView] = useState('main'); // 'main' or 'panfletos'
+    const [view, setView] = useState('main');
     if (view === 'panfletos') {
         return (
             <div>
                 <button onClick={() => setView('main')} className="mb-6 bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition">&larr; Voltar</button>
                 <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Panfletos</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {Object.values(brochureMaterials.panfletos).map(item => <MaterialCard key={item.title} item={item} />)}
+                    {Object.entries(materialsMap.brochureMaterials.panfletos).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`brochureMaterials.panfletos.${key}`} />)}
                 </div>
             </div>
         )
@@ -104,8 +99,8 @@ export const BrochurePresenter = () => {
             <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Folheteria</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <button onClick={() => setView('panfletos')} className="p-8 bg-white dark:bg-indigo-800 rounded-lg shadow-lg text-left hover:shadow-xl hover:scale-105 transition-transform"><h3 className="text-2xl font-bold dark:text-white">📰 Ver Panfletos</h3></button>
-                <MaterialCard item={brochureMaterials.catalogo} />
-                <MaterialCard item={brochureMaterials.enquete} />
+                <MaterialCard item={materialsMap.brochureMaterials.catalogo} filePath="brochureMaterials.catalogo" />
+                <MaterialCard item={materialsMap.brochureMaterials.enquete} filePath="brochureMaterials.enquete" />
             </div>
         </div>
     );
@@ -115,7 +110,7 @@ export const LoyaltyPresenter = () => (
     <div>
         <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Programa de Fidelidade</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {Object.values(loyaltyMaterials).map(item => <MaterialCard key={item.title} item={item} />)}
+            {Object.entries(materialsMap.loyaltyMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`loyaltyMaterials.${key}`} />)}
         </div>
     </div>
 );
@@ -124,7 +119,7 @@ export const TransferFactorPresenter = () => (
     <div>
         <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Fatores de Transferência</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {Object.values(transferFactorMaterials).map(item => <MaterialCard key={item.title} item={item} />)}
+            {Object.entries(materialsMap.transferFactorMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`transferFactorMaterials.${key}`} />)}
         </div>
     </div>
 );
@@ -133,7 +128,7 @@ export const FactoryPresenter = () => (
     <div>
         <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Vídeos da Fábrica 4Life</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {Object.values(factoryMaterials).map(item => <MaterialCard key={item.title} item={item} />)}
+            {Object.entries(materialsMap.factoryMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`factoryMaterials.${key}`} />)}
         </div>
     </div>
 );
@@ -148,7 +143,7 @@ export const ProductBrowser = () => {
     const callApi = async (prompt) => { try { const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), }); if (!response.ok) throw new Error('Falha na resposta da API.'); const data = await response.json(); return data.text; } catch (error) { console.error('Erro ao chamar a API:', error); return 'Ocorreu um erro ao processar seu pedido.'; } };
     const handleGeneratePitchClick = async (productId, productName) => { setIsPitchLoading(productId); const prompt = `Gere 3 opções distintas de copy de anúncio para tráfego pago, em português do Brasil, para o produto "${productName}". Cada opção deve ser curta (2-3 frases), persuasiva, usar emojis ✨ e ter uma chamada para ação clara como "Saiba Mais". Separe as 3 opções EXATAMENTE com '|||' e não adicione nenhum texto introdutório, numeração ou títulos.`; const result = await callApi(prompt); const resultsArray = result.split('|||').map(s => s.trim()).filter(Boolean); setGeneratedPitches(prev => ({ ...prev, [productId]: resultsArray })); setIsPitchLoading(null); };
     const handleCopyPitch = (textToCopy, productId, index) => { navigator.clipboard.writeText(textToCopy); const key = `${productId}-${index}`; setPitchCopyButtonText(prev => ({ ...prev, [key]: 'Copiado!' })); setTimeout(() => setPitchCopyButtonText(prev => ({ ...prev, [key]: 'Copiar' })), 2000); };
-    const handleProductSelect = (productId) => { const product = productData[productId] || { name: individualProducts.find(p => p.id === productId)?.name, options: [] }; setSelectedProduct({ id: productId, ...product }); setView('product_detail'); };
+    const handleProductSelect = (productId) => { const product = materialsMap.productData[productId] || { name: materialsMap.individualProducts.find(p => p.id === productId)?.name, options: [] }; setSelectedProduct({ id: productId, ...product }); setView('product_detail'); };
     
     if (view === 'product_detail') {
         return (
@@ -170,25 +165,14 @@ export const ProductBrowser = () => {
                             );
                         }
                         
-                        // [CORREÇÃO] Gera um MaterialCard para cada opção de material
                         const contentInfo = selectedProduct.content?.[option];
-                        if(contentInfo) {
-                            const materialItem = {
-                                type: contentInfo.type || 'file',
-                                title: option.charAt(0).toUpperCase() + option.slice(1).replace('_', ' '),
-                                description: `Acesse o material: ${option.replace(/_/g, ' ')}`,
-                                url: contentInfo.url || '#'
-                            };
-                            return <MaterialCard key={option} item={materialItem} />;
-                        } else {
-                            // Renderiza um card inativo se não houver conteúdo definido
-                            return (
-                                <div key={option} className="p-6 bg-slate-100 dark:bg-slate-700/50 rounded-lg shadow-md text-left opacity-60">
-                                    <h3 className="font-semibold text-lg capitalize dark:text-white">{option.replace(/_/g, ' ')}</h3>
-                                    <p className="mt-2 text-slate-600 dark:text-slate-400">Conteúdo para esta opção ainda não foi adicionado.</p>
-                                </div>
-                            );
-                        }
+                        const materialItem = {
+                            type: contentInfo?.type || 'file',
+                            title: option.charAt(0).toUpperCase() + option.slice(1).replace(/_/g, ' '),
+                            description: contentInfo ? `Acesse o material: ${option.replace(/_/g, ' ')}` : 'Conteúdo em breve.',
+                            url: contentInfo?.url || '#'
+                        };
+                        return <MaterialCard key={option} item={materialItem} filePath={`productData.${selectedProduct.id}.content.${option}`} />;
                     })}
                 </div>
             </div>
@@ -199,7 +183,7 @@ export const ProductBrowser = () => {
             <div>
                 <button onClick={() => setView('main')} className="mb-6 bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition">&larr; Voltar</button>
                 <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Produtos Individuais</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{individualProducts.map(product => (<button key={product.id} onClick={() => handleProductSelect(product.id)} className="p-6 bg-white dark:bg-indigo-800 rounded-lg shadow-md text-left hover:shadow-lg hover:scale-105 transition-transform"><h3 className="font-semibold text-lg dark:text-white">{product.name}</h3></button>))}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{materialsMap.individualProducts.map(product => (<button key={product.id} onClick={() => handleProductSelect(product.id)} className="p-6 bg-white dark:bg-indigo-800 rounded-lg shadow-md text-left hover:shadow-lg hover:scale-105 transition-transform"><h3 className="font-semibold text-lg dark:text-white">{product.name}</h3></button>))}</div>
             </div>
         );
     }
@@ -219,14 +203,14 @@ export const ProductBrowser = () => {
 export const OpportunityPresenter = () => (
     <div>
         <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Apresentação da Oportunidade</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.values(opportunityMaterials).map(item => <MaterialCard key={item.title} item={item} />)}</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.opportunityMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`opportunityMaterials.${key}`} />)}</div>
     </div>
 );
 
 export const BonusBuilderPresenter = () => (
     <div>
         <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Bônus Construtor</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.values(bonusBuilderMaterials).map(item => <MaterialCard key={item.title} item={item} />)}</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.bonusBuilderMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`bonusBuilderMaterials.${key}`} />)}</div>
     </div>
 );
 
@@ -239,7 +223,7 @@ export const TablesPresenter = () => {
                 <button onClick={() => setView('precos')} className="mb-6 bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition">&larr; Voltar</button>
                 <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Preços de Produtos</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {Object.values(tablesMaterials.precos_produtos).map(item => <MaterialCard key={item.title} item={{...item, description: `Baixe a tabela de preços para ${item.title.split(' ')[1]}.`}} />)}
+                    {Object.entries(materialsMap.tablesMaterials.precos_produtos).map(([key, item]) => <MaterialCard key={item.title} item={{...item, description: `Baixe a tabela de preços para ${item.title.split(' ')[1]}.`}} filePath={`tablesMaterials.precos_produtos.${key}`} />)}
                 </div>
             </div>
         )
@@ -250,7 +234,7 @@ export const TablesPresenter = () => {
                 <button onClick={() => setView('precos')} className="mb-6 bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition">&larr; Voltar</button>
                 <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Preços de Kits</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {Object.values(tablesMaterials.precos_kits).map(item => <MaterialCard key={item.title} item={{...item, description: `Baixe a tabela de preços para ${item.title}.`}} />)}
+                    {Object.entries(materialsMap.tablesMaterials.precos_kits).map(([key, item]) => <MaterialCard key={item.title} item={{...item, description: `Baixe a tabela de preços para ${item.title}.`}} filePath={`tablesMaterials.precos_kits.${key}`} />)}
                 </div>
             </div>
         )
@@ -272,8 +256,8 @@ export const TablesPresenter = () => {
             <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Menu de Tabelas</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <button onClick={() => setView('precos')} className="p-8 bg-white dark:bg-indigo-800 rounded-lg shadow-lg text-left hover:shadow-xl hover:scale-105 transition-transform"><h3 className="text-2xl font-bold dark:text-white">📊 Tabela de Preços</h3></button>
-                <MaterialCard item={{...tablesMaterials.pontos, description: 'Consulte a tabela de pontos dos produtos.'}} />
-                <MaterialCard item={{...tablesMaterials.resgate_fidelidade, description: 'Veja a tabela para resgate de pontos.'}} />
+                <MaterialCard item={{...materialsMap.tablesMaterials.pontos, description: 'Consulte a tabela de pontos dos produtos.'}} filePath="tablesMaterials.pontos" />
+                <MaterialCard item={{...materialsMap.tablesMaterials.resgate_fidelidade, description: 'Veja a tabela para resgate de pontos.'}} filePath="tablesMaterials.resgate_fidelidade" />
             </div>
         </div>
     );
@@ -285,7 +269,7 @@ export const GlossaryPresenter = () => {
         <div>
             <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Glossário de Termos</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {Object.entries(glossaryTerms).map(([key, term]) => (
+                {Object.entries(materialsMap.glossaryTerms).map(([key, term]) => (
                     <button key={key} onClick={() => setSelectedTerm(selectedTerm === key ? null : key)} className="p-4 bg-white dark:bg-indigo-800 rounded-lg shadow-md text-left hover:shadow-lg hover:bg-slate-50 dark:hover:bg-indigo-700 transition">
                         <h3 className="font-semibold text-md dark:text-white">{term.emoji} {term.title}</h3>
                     </button>
@@ -293,12 +277,12 @@ export const GlossaryPresenter = () => {
             </div>
             {selectedTerm && (
                 <div className="mt-6 p-6 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-r-lg">
-                    <h3 className="font-bold text-xl mb-2 text-slate-900 dark:text-white">{glossaryTerms[selectedTerm].emoji} {glossaryTerms[selectedTerm].title}</h3>
-                    <p className="text-slate-700 dark:text-slate-300">{glossaryTerms[selectedTerm].definition}</p>
+                    <h3 className="font-bold text-xl mb-2 text-slate-900 dark:text-white">{materialsMap.glossaryTerms[selectedTerm].emoji} {materialsMap.glossaryTerms[selectedTerm].title}</h3>
+                    <p className="text-slate-700 dark:text-slate-300">{materialsMap.glossaryTerms[selectedTerm].definition}</p>
                 </div>
             )}
             <div className="mt-8">
-                 <MaterialCard item={{type: 'file', title: 'Baixar Glossário Completo', description: 'Tenha todos os termos em um único arquivo PDF.', url: '/path/to/glossario.pdf'}} />
+                 <MaterialCard item={{type: 'file', title: 'Baixar Glossário Completo', description: 'Tenha todos os termos em um único arquivo PDF.', url: '/path/to/glossario.pdf'}} filePath="glossaryTerms.download" />
             </div>
         </div>
     );
@@ -328,7 +312,7 @@ export const RankingPresenter = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {Object.entries(positionsData).map(([name, details]) => (
+                        {Object.entries(materialsMap.positionsData).map(([name, details]) => (
                             <tr key={name} className="bg-white dark:bg-indigo-900 border-b dark:border-indigo-800 hover:bg-slate-50 dark:hover:bg-indigo-800">
                                 <th scope="row" className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap dark:text-white">{details.emoji} {name}</th>
                                 <td className="px-6 py-4">{formatValue(details.pv_mensal, ' PV')}</td>
@@ -357,9 +341,9 @@ export const ChannelsPresenter = () => {
                 </ul>
             </div>
             <div>
-                <div className={`${activeTab === 'youtube' ? 'block' : 'hidden'}`}><div className="space-y-4">{channels.youtube.map(channel => <a key={channel.title} href={channel.url} target="_blank" rel="noopener noreferrer" className="block p-4 bg-white dark:bg-indigo-800 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-indigo-700">{channel.title}</a>)}</div></div>
-                <div className={`${activeTab === 'telegram' ? 'block' : 'hidden'}`}><div className="space-y-4">{channels.telegram.map(channel => <a key={channel.title} href={channel.url} target="_blank" rel="noopener noreferrer" className="block p-4 bg-white dark:bg-indigo-800 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-indigo-700">{channel.title}</a>)}</div></div>
-                <div className={`${activeTab === 'whatsapp' ? 'block' : 'hidden'}`}><div className="space-y-4">{channels.whatsapp.map(channel => <a key={channel.title} href={channel.url} target="_blank" rel="noopener noreferrer" className="block p-4 bg-white dark:bg-indigo-800 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-indigo-700">{channel.title}</a>)}</div></div>
+                <div className={`${activeTab === 'youtube' ? 'block' : 'hidden'}`}><div className="space-y-4">{materialsMap.channels.youtube.map(channel => <a key={channel.title} href={channel.url} target="_blank" rel="noopener noreferrer" className="block p-4 bg-white dark:bg-indigo-800 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-indigo-700">{channel.title}</a>)}</div></div>
+                <div className={`${activeTab === 'telegram' ? 'block' : 'hidden'}`}><div className="space-y-4">{materialsMap.channels.telegram.map(channel => <a key={channel.title} href={channel.url} target="_blank" rel="noopener noreferrer" className="block p-4 bg-white dark:bg-indigo-800 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-indigo-700">{channel.title}</a>)}</div></div>
+                <div className={`${activeTab === 'whatsapp' ? 'block' : 'hidden'}`}><div className="space-y-4">{materialsMap.channels.whatsapp.map(channel => <a key={channel.title} href={channel.url} target="_blank" rel="noopener noreferrer" className="block p-4 bg-white dark:bg-indigo-800 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-indigo-700">{channel.title}</a>)}</div></div>
             </div>
         </div>
     );

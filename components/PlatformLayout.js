@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Componente principal do layout da plataforma (menu lateral e área de conteúdo).
+// Componente principal do layout com novo design e correção para o menu no desktop.
 
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,15 +67,8 @@ const PlatformLayout = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-200">
-            {/* Overlay para celular */}
-            {isSidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black opacity-50 z-30 md:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                ></div>
-            )}
-
-            {/* --- Menu Lateral --- */}
+            {isSidebarOpen && (<div className="fixed inset-0 bg-black opacity-50 z-30 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>)}
+            
             <aside className={`fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-80 p-6 h-screen overflow-y-auto shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
                 <div>
                     <div className="flex justify-between items-center mb-2">
