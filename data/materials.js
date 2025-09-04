@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: data/materials.js
-// Centraliza todos os dados e links de materiais da plataforma.
+// Versão com todos os materiais agrupados para facilitar a busca pela API de download.
 
 export const professionalTestimonials = {
     'dra_lorenlay_rachid': { type: 'file', title: 'Dra. Lorenlay Rachid', description: 'Baixe o vídeo.', url: '/path/to/video.mp4' },
@@ -114,13 +114,14 @@ export const opportunityMaterials = {
 };
 
 export const productData = {
-    riovidaburst: { name: 'RioVida Burst', options: ['perfil', 'videos', 'perfil_mobile', 'pitch_venda', 'recorte_png', 'imagens', 'carrosseis'], content: { perfil: { type: 'document', text: 'Documento com o perfil principal do RioVida Burst.' }, videos: { type: 'video', text: 'Aqui seriam exibidos os vídeos sobre o RioVida Burst.' }, perfil_mobile: { type: 'image', text: 'Imagem do perfil do produto, otimizada para celular.' }, recorte_png: { type: 'file', text: 'Arquivo PNG com recorte do produto para download.' }, imagens: { type: 'gallery', text: 'Galeria com imagens detalhadas do produto.' }, carrosseis: { type: 'gallery', text: 'Galeria com os carrosséis de imagens para redes sociais.' }, } },
+    riovidaburst: { name: 'RioVida Burst', options: ['perfil', 'videos', 'perfil_mobile', 'pitch_venda', 'recorte_png', 'imagens', 'carrosseis'], content: { perfil: { type: 'document', url: '/path/to/doc.pdf' }, videos: { type: 'video', url: '/path/to/video.mp4' }, perfil_mobile: { type: 'image', url: '/path/to/img.jpg' }, recorte_png: { type: 'file', url: '/path/to/img.png' }, imagens: { type: 'gallery', text: 'Galeria com imagens detalhadas do produto.' }, carrosseis: { type: 'gallery', text: 'Galeria com os carrosséis de imagens para redes sociais.' }, } },
     riovidastix: { name: 'RioVida Stix', options: ['perfil', 'videos', 'pitch_venda'] }, 
     bioefa: { 
         name: 'BioEFA', 
         options: ['perfil', 'pitch_venda', 'recorte_png'],
         content: {
-            perfil: { type: 'file', url: 'https://drive.google.com/file/d/1jygPn3j3LkytVNMfQY9cVczSYV8pTNnP/view?usp=drive_link' }
+            perfil: { type: 'file', url: 'https://drive.google.com/file/d/1jygPn3j3LkytVNMfQY9cVczSYV8pTNnP/view?usp=drive_link' },
+            recorte_png: { type: 'file', url: '/path/to/image.png'}
         }
     },
     energygostix: { name: 'Energy Go Stix', options: ['perfil', 'videos', 'perfil_mobile', 'pitch_venda'] }, 
