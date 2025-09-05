@@ -1,17 +1,18 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Layout principal com o novo item de menu "Chat Global".
+// Versão final com novo design, menus recolhidos e navegação direta para produtos.
 
 import { useState } from 'react';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import InviteGenerator from './InviteGenerator';
 import WelcomeScreen from './WelcomeScreen';
-import GlobalChat from './GlobalChat'; // Importa o novo componente
+import GlobalChat from './GlobalChat';
 import {
     MaterialViewer, BrochurePresenter, LoyaltyPresenter, TransferFactorPresenter, FactoryPresenter,
     ProductBrowser, OpportunityPresenter, BonusBuilderPresenter, TablesPresenter, GlossaryPresenter,
     RankingPresenter, ChannelsPresenter, MaterialCard, ArtsPresenter
 } from './MaterialPresenters';
+
 import { materialsMap } from '../data/materials';
 
 const PlatformLayout = () => {
@@ -22,7 +23,7 @@ const PlatformLayout = () => {
 
     const commandMap = {
         'inicio': { title: 'Início' },
-        'chat': { title: 'Chat Global' }, // Novo item
+        'chat': { title: 'Chat Global' },
         'convite': { title: 'Gerador de Convites' },
         'ranking': { title: 'Ranking' },
         'apresentacao': { title: 'Apresentação da Oportunidade' },
@@ -49,7 +50,7 @@ const PlatformLayout = () => {
     const getMenuItems = (role) => {
         const baseMenu = {
             "🏠 Início": ['inicio'],
-            "💬 Comunidade": ['chat'], // Nova categoria
+            "💬 Comunidade": ['chat'],
             "⚙️ Ferramentas IA": ['convite'],
             "🚀 Negócios & Treinamentos": ['ranking', 'apresentacao', 'marketingrede', 'recompensas2024', 'bonusconstrutor', 'treinamento'],
             "💰 Produtos & Benefícios": ['produtos', 'fatorestransferencia', 'profissionais', 'fabrica4life', 'fidelidade', 'glossario', 'tabelas',  'loja'],
@@ -79,27 +80,37 @@ const PlatformLayout = () => {
         if (activeCommand === 'produtos') {
             return <ProductBrowser key={selectedProductId} initialProductId={selectedProductId} onBack={() => handleMenuClick('inicio')} />;
         }
-        switch (activeCommand) {
-            case 'inicio': return <WelcomeScreen />;
-            case 'chat': return <GlobalChat />; // Renderiza o chat
-            case 'convite': return <InviteGenerator />;
-            case 'apresentacao': return <OpportunityPresenter />;
-            case 'bonusconstrutor': return <BonusBuilderPresenter />;
-            case 'fabrica4life': return <FactoryPresenter />;
-            case 'fatorestransferencia': return <TransferFactorPresenter />;
-            case 'fidelidade': return <LoyaltyPresenter />;
-            case 'folheteria': return <BrochurePresenter />;
-            case 'artes': return <ArtsPresenter />;
-            case 'marketingrede': return <MaterialViewer title={commandMap.marketingrede.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.marketingMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`marketingMaterials.${key}`} />)}</div></MaterialViewer>;
-            case 'recompensas2024': return <MaterialViewer title={commandMap.recompensas2024.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><MaterialCard item={materialsMap.rewardsMaterials.pdf} filePath="rewardsMaterials.pdf" /></div></MaterialViewer>;
-            case 'treinamento': return <MaterialViewer title={commandMap.treinamento.title}><div className="space-y-6">{Object.entries(materialsMap.trainingMaterials).map(([category, items]) => (<div key={category}><h3 className="text-xl font-semibold mb-4">{category}</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{items.map((item, index) => <MaterialCard key={item.title} item={{...item, description: `Baixe o arquivo: ${item.title}`}} filePath={`trainingMaterials.${category}[${index}]`} />)}</div></div>))}</div></MaterialViewer>;
-            case 'tabelas': return <TablesPresenter />;
-            case 'glossario': return <GlossaryPresenter />;
-            case 'ranking': return <RankingPresenter />;
-            case 'profissionais': return <MaterialViewer title={commandMap.profissionais.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.professionalTestimonials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`professionalTestimonials.${key}`} />)}</div></MaterialViewer>;
-            case 'canais': return <ChannelsPresenter />;
-            default: return <MaterialViewer title={commandMap[activeCommand]?.title || ''} />;
+        if (activeCommand === 'chat') {
+            return <GlobalChat />;
         }
+        
+        // Outros componentes são envolvidos por um container de padding
+        return (
+            <div className="p-6 md:p-10">
+                {(() => {
+                    switch (activeCommand) {
+                        case 'inicio': return <WelcomeScreen />;
+                        case 'convite': return <InviteGenerator />;
+                        case 'apresentacao': return <OpportunityPresenter />;
+                        case 'bonusconstrutor': return <BonusBuilderPresenter />;
+                        case 'fabrica4life': return <FactoryPresenter />;
+                        case 'fatorestransferencia': return <TransferFactorPresenter />;
+                        case 'fidelidade': return <LoyaltyPresenter />;
+                        case 'folheteria': return <BrochurePresenter />;
+                        case 'artes': return <ArtsPresenter />;
+                        case 'marketingrede': return <MaterialViewer title={commandMap.marketingrede.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.marketingMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`marketingMaterials.${key}`} />)}</div></MaterialViewer>;
+                        case 'recompensas2024': return <MaterialViewer title={commandMap.recompensas2024.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><MaterialCard item={materialsMap.rewardsMaterials.pdf} filePath="rewardsMaterials.pdf" /></div></MaterialViewer>;
+                        case 'treinamento': return <MaterialViewer title={commandMap.treinamento.title}><div className="space-y-6">{Object.entries(materialsMap.trainingMaterials).map(([category, items]) => (<div key={category}><h3 className="text-xl font-semibold mb-4">{category}</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{items.map((item, index) => <MaterialCard key={item.title} item={{...item, description: `Baixe o arquivo: ${item.title}`}} filePath={`trainingMaterials.${category}[${index}]`} />)}</div></div>))}</div></MaterialViewer>;
+                        case 'tabelas': return <TablesPresenter />;
+                        case 'glossario': return <GlossaryPresenter />;
+                        case 'ranking': return <RankingPresenter />;
+                        case 'profissionais': return <MaterialViewer title={commandMap.profissionais.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.professionalTestimonials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`professionalTestimonials.${key}`} />)}</div></MaterialViewer>;
+                        case 'canais': return <ChannelsPresenter />;
+                        default: return <MaterialViewer title={commandMap[activeCommand]?.title || ''} />;
+                    }
+                })()}
+            </div>
+        );
     };
 
     return (
@@ -167,8 +178,13 @@ const PlatformLayout = () => {
             </aside>
             
             <main className="md:ml-80 h-screen flex flex-col">
-                 <header className="md:hidden flex justify-between items-center p-4 sticky top-0 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-700"><h1 className="text-xl font-bold text-slate-900 dark:text-white">{activeCommand === 'produtos' && selectedProductId ? materialsMap.productData[selectedProductId].name : commandMap[activeCommand]?.title}</h1><button onClick={() => setIsSidebarOpen(true)} className="p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button></header>
-                 <div className={`flex-grow p-6 md:p-10 overflow-y-auto ${activeCommand === 'chat' ? 'flex flex-col' : ''}`}>
+                 <header className="md:hidden flex justify-between items-center p-4 sticky top-0 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-700">
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">{activeCommand === 'produtos' && selectedProductId ? materialsMap.productData[selectedProductId].name : commandMap[activeCommand]?.title}</h1>
+                    <button onClick={() => setIsSidebarOpen(true)} className="p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                 </header>
+                 <div className={`flex-grow overflow-y-auto ${activeCommand === 'chat' ? 'p-0' : ''}`}>
                     {renderContent()}
                  </div>
             </main>
