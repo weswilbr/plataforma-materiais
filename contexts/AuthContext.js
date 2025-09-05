@@ -35,11 +35,11 @@ export function AuthProvider({ children }) {
                         }
                         // Quando o utilizador se desconectar, o Firebase irá marcá-lo como offline.
                         onDisconnect(userStatusRef).set({ state: 'offline', last_changed: serverTimestamp() }).then(() => {
-                            // Quando o utilizador se conectar, grava o seu estado, nome e role.
+                            // [CORREÇÃO] Quando o utilizador se conectar, grava o seu estado, nome e role.
                             set(userStatusRef, { 
                                 state: 'online', 
-                                name: userData.name, // <-- CORREÇÃO
-                                role: userData.role, // <-- CORREÇÃO
+                                name: userData.name,
+                                role: userData.role,
                                 last_changed: serverTimestamp() 
                             });
                         });
