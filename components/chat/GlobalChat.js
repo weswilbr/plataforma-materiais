@@ -1,53 +1,80 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão com a nova tela de "Entrar no Chat" e controlo de status (online, ocupado, offline).
+// Versão com a funcionalidade de minimizar, pop-ups de novas mensagens e controlo de notificações.
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
-import { ref, onValue, set, onDisconnect } from "firebase/database";
+import { ref, onValue } from "firebase/database";
+import { SendIcon, AiIcon, UsersIcon, MinimizeIcon, ChatBubbleIcon, OnlineUsersModal } from './chat/ChatUI';
 
-// --- Ícones SVG ---
-const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>;
-const AiIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>;
-const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
-
-// Sub-componente para a lista de utilizadores online
-const OnlineUsersModal = ({ users, onClose, getRoleColor, getStatusIndicator }) => (
-    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-10 flex justify-end" onClick={onClose}>
-        <div className="w-80 h-full bg-white dark:bg-slate-800 shadow-2xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-slate-800 dark:text-white mb-4">Na Comunidade ({users.length})</h3>
-            <div className="flex-1 overflow-y-auto space-y-3">
-                {users.map(onlineUser => (
-                    <div key={onlineUser.uid} className="flex items-center gap-3">
-                        {getStatusIndicator(onlineUser.state)}
-                        <p className={`font-medium ${getRoleColor(onlineUser.role)}`}>{onlineUser.name}</p>
-                    </div>
-                ))}
-            </div>
-        </div>
-    </div>
-);
-
-const GlobalChat = () => {
-    const { user } = useAuth();
+const GlobalChat = ({ isVisible, onClose }) => {
+    const { user, chatStatus, updateUserChatStatus } = useAuth();
     const [messages, setMessages] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [isAiSelected, setIsAiSelected] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isOnlineListVisible, setIsOnlineListVisible] = useState(false);
-    const [userStatus, setUserStatus] = useState('offline');
+    const [isMinimized, setIsMinimized] = useState(false);
+    const [newNotification, setNewNotification] = useState(null);
+    const [popupsEnabled, setPopupsEnabled] = useState(true);
     const messagesEndRef = useRef(null);
+    const notificationSound = useRef(null);
 
-    // Efeitos de busca de dados
+    // Efeito para carregar o Tone.js e inicializar o som
     useEffect(() => {
-        if (!userStatus || userStatus === 'offline') return;
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js';
+        script.async = true;
+        script.onload = () => {
+            // Garante que o Tone.js seja iniciado por um gesto do utilizador para compatibilidade com os navegadores
+            const startAudio = () => {
+                window.Tone.start();
+                notificationSound.current = new window.Tone.Synth().toDestination();
+                document.body.removeEventListener('click', startAudio);
+            };
+            document.body.addEventListener('click', startAudio);
+        };
+        document.body.appendChild(script);
+        return () => {
+            if (script.parentNode) {
+                document.body.removeChild(script);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (chatStatus === 'offline') {
+            setMessages([]);
+            return;
+        }
+
+        let lastMessageTimestamp = null;
 
         const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
         const unsubscribeMsg = onSnapshot(q, (querySnapshot) => {
             const msgs = [];
-            querySnapshot.forEach((doc) => { msgs.push({ id: doc.id, ...doc.data() }); });
+            let hasNewMessage = false;
+            querySnapshot.forEach((doc) => {
+                const msgData = { id: doc.id, ...doc.data() };
+                msgs.push(msgData);
+                if (msgData.timestamp && (!lastMessageTimestamp || msgData.timestamp > lastMessageTimestamp)) {
+                    hasNewMessage = true;
+                    lastMessageTimestamp = msgData.timestamp;
+                }
+            });
+            
+            const lastMessage = msgs[msgs.length - 1];
+            if (hasNewMessage && lastMessage && lastMessage.uid !== user.uid) {
+                if (isMinimized && popupsEnabled) {
+                    setNewNotification(lastMessage);
+                    if (notificationSound.current) {
+                        notificationSound.current.triggerAttackRelease("C5", "8n");
+                    }
+                    setTimeout(() => setNewNotification(null), 5000);
+                }
+            }
             setMessages(msgs);
         });
 
@@ -65,30 +92,17 @@ const GlobalChat = () => {
             setOnlineUsers(online);
         });
 
-        return () => {
-            unsubscribeMsg();
-            unsubscribeStatus();
+        return () => { 
+            unsubscribeMsg(); 
+            unsubscribeStatus(); 
         };
-    }, [userStatus]);
+    }, [chatStatus, isMinimized, popupsEnabled, user.uid]);
 
-    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-    
-    const updateUserStatus = (state) => {
-        if (!user) return;
-        const userStatusRef = ref(rtdb, '/status/' + user.uid);
-        if (state === 'offline') {
-            set(userStatusRef, { state: 'offline', last_changed: serverTimestamp() });
-            setUserStatus('offline');
-        } else {
-             onValue(ref(rtdb, '.info/connected'), (snapshot) => {
-                if (snapshot.val() === false) return;
-                onDisconnect(userStatusRef).set({ state: 'offline', last_changed: serverTimestamp() }).then(() => {
-                    set(userStatusRef, { state, name: user.name, role: user.role, last_changed: serverTimestamp() });
-                    setUserStatus(state);
-                });
-            }, { onlyOnce: true });
+    useEffect(() => { 
+        if(!isMinimized) {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); 
         }
-    };
+    }, [messages, isMinimized]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -132,31 +146,38 @@ const GlobalChat = () => {
         );
     };
 
-    if (userStatus === 'offline') {
+    if (!isVisible) return null;
+
+    if (isMinimized) {
         return (
-            <div className="h-full flex flex-col items-center justify-center bg-white dark:bg-indigo-900 rounded-lg shadow-lg p-8 text-center">
-                <h2 className="text-3xl font-bold text-slate-800 dark:text-white">Comunidade da Equipe</h2>
-                <p className="mt-4 text-lg text-slate-600 dark:text-slate-300 max-w-md">Conecte-se com outros membros da equipe, troque ideias e tire dúvidas em tempo real.</p>
-                <button onClick={() => updateUserStatus('online')} className="mt-8 px-8 py-3 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105">
-                    Entrar no Chat e Ficar Online
+            <div className="fixed bottom-4 right-4 z-20">
+                {newNotification && (
+                    <div className="absolute bottom-20 right-0 w-72 bg-white dark:bg-slate-700 p-3 rounded-lg shadow-xl animate-fade-in">
+                        <p className={`font-bold text-sm ${getRoleColor(newNotification.role)}`}>{newNotification.name}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300 truncate">{newNotification.text}</p>
+                    </div>
+                )}
+                <button 
+                    onClick={() => setIsMinimized(false)} 
+                    className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                    title="Maximizar Chat"
+                >
+                    <ChatBubbleIcon />
                 </button>
             </div>
         );
     }
     
     return (
-        <div className="h-full flex flex-col bg-white dark:bg-indigo-900 rounded-lg shadow-lg relative overflow-hidden">
+        <div className="fixed bottom-4 right-4 w-96 h-[600px] flex flex-col bg-white dark:bg-indigo-900 rounded-lg shadow-2xl z-20 animate-fade-in">
             {isOnlineListVisible && <OnlineUsersModal users={onlineUsers} onClose={() => setIsOnlineListVisible(false)} getRoleColor={getRoleColor} getStatusIndicator={getStatusIndicator} />}
             <header className="p-4 border-b border-slate-200 dark:border-indigo-800 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-slate-800 dark:text-white">Chat Global da Equipe</h2>
-                <div className="flex items-center gap-4">
-                    <button onClick={() => updateUserStatus(userStatus === 'online' ? 'busy' : 'online')} className={`px-3 py-1.5 text-sm font-medium rounded-full transition ${userStatus === 'busy' ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'}`}>
-                        {userStatus === 'busy' ? 'Ficar Disponível' : 'Ficar Ocupado'}
-                    </button>
-                    <button onClick={() => updateUserStatus('offline')} className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:underline">Sair do Chat</button>
-                    <button onClick={() => setIsOnlineListVisible(true)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-indigo-800 rounded-full text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-indigo-700 transition">
-                        <UsersIcon /><span>Online ({onlineUsers.length})</span>
-                    </button>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white">Chat Global</h2>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => updateUserChatStatus(chatStatus === 'online' ? 'busy' : 'online')} className={`px-3 py-1.5 text-sm font-medium rounded-full transition ${chatStatus === 'busy' ? 'bg-yellow-500' : 'bg-green-500'} text-white`}>{chatStatus === 'busy' ? 'Ocupado' : 'Disponível'}</button>
+                    <button onClick={() => { updateUserChatStatus('offline'); onClose(); }} className="text-sm font-medium text-red-500 hover:underline">Sair</button>
+                    <button onClick={() => setIsOnlineListVisible(true)} className="p-1.5 bg-slate-100 dark:bg-indigo-800 rounded-full text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-indigo-700 transition"><UsersIcon /></button>
+                    <button onClick={() => setIsMinimized(true)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition" title="Minimizar"><MinimizeIcon /></button>
                 </div>
             </header>
             <main className="flex-1 p-4 overflow-y-auto space-y-4">
@@ -164,13 +185,19 @@ const GlobalChat = () => {
                     <div key={msg.id} className={`flex items-end gap-2 ${msg.uid === user.uid ? 'justify-end' : 'justify-start'}`}>
                         <div className={`p-3 rounded-2xl max-w-lg ${msg.uid === user.uid ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-indigo-800 rounded-bl-none'}`}>
                             <p className={`font-bold text-sm mb-1 ${getRoleColor(msg.role)} ${msg.uid === user.uid ? 'hidden' : 'block'}`}>{msg.name}</p>
-                            <p className="text-base">{msg.text}</p>
+                            <p className="text-base break-words">{msg.text}</p>
                         </div>
                     </div>
                 ))}
                 <div ref={messagesEndRef} />
             </main>
             <footer className="p-4 border-t border-slate-200 dark:border-indigo-800">
+                 <div className="flex items-center justify-center mb-2">
+                    <label htmlFor="popups-toggle" className="flex items-center cursor-pointer text-xs text-slate-500 dark:text-slate-400">
+                        <input type="checkbox" id="popups-toggle" checked={popupsEnabled} onChange={() => setPopupsEnabled(!popupsEnabled)} className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600"/>
+                        <span className="ml-2">Notificações pop-up</span>
+                    </label>
+                </div>
                 <form onSubmit={handleSendMessage} className="flex items-center gap-3">
                     <button type="button" onClick={() => setIsAiSelected(!isAiSelected)} className={`p-2 rounded-full transition ${isAiSelected ? 'bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-indigo-800 text-slate-500 dark:text-slate-300'}`} title="Falar com a IA"><AiIcon /></button>
                     <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={isAiSelected ? "Pergunte algo para a IA..." : "Digite sua mensagem..."} className="flex-1 px-4 py-2 bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-full focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" disabled={isLoading} />
