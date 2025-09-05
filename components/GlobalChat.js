@@ -1,12 +1,12 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão com a funcionalidade de minimizar, pop-ups de novas mensagens e controlo de notificações.
+// Versão com o novo layout radical, menu de opções e pop-up de utilizadores online.
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
-import { SendIcon, AiIcon, UsersIcon, MinimizeIcon, ChatBubbleIcon, OnlineUsersModal, EmojiIcon, EmojiPicker, SoundOnIcon, SoundOffIcon } from './chat/ChatUI';
+import { SendIcon, AiIcon, MinimizeIcon, ChatBubbleIcon, EmojiIcon, EmojiPicker, SoundOnIcon, SoundOffIcon, MoreVerticalIcon } from './chat/ChatUI';
 
 const GlobalChat = ({ isVisible, onClose }) => {
     const { user, chatStatus, updateUserChatStatus } = useAuth();
@@ -15,12 +15,12 @@ const GlobalChat = ({ isVisible, onClose }) => {
     const [newMessage, setNewMessage] = useState('');
     const [isAiSelected, setIsAiSelected] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [isOnlineListVisible, setIsOnlineListVisible] = useState(false);
     const [isMinimized, setIsMinimized] = useState(false);
     const [newNotification, setNewNotification] = useState(null);
     const [popupsEnabled, setPopupsEnabled] = useState(true);
     const [isMuted, setIsMuted] = useState(false);
     const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
+    const [isOptionsMenuVisible, setIsOptionsMenuVisible] = useState(false);
     const messagesEndRef = useRef(null);
     const notificationSound = useRef(null);
 
@@ -32,23 +32,20 @@ const GlobalChat = ({ isVisible, onClose }) => {
         script.onload = () => {
             const startAudio = () => {
                 window.Tone.start();
-                notificationSound.current = new window.Tone.Synth({
-                    oscillator: { type: 'sine' },
-                    envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 }
-                }).toDestination();
+                notificationSound.current = new window.Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 } }).toDestination();
                 document.body.removeEventListener('click', startAudio);
             };
             document.body.addEventListener('click', startAudio);
         };
         document.body.appendChild(script);
-        return () => {
-            if (script.parentNode) { document.body.removeChild(script); }
-        };
+        return () => { if (script.parentNode) { document.body.removeChild(script); }};
     }, []);
 
+    // Efeito para buscar mensagens e utilizadores online
     useEffect(() => {
         if (chatStatus === 'offline') return;
         let lastMessageTimestamp = null;
+
         const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
         const unsubscribeMsg = onSnapshot(q, (querySnapshot) => {
             const msgs = [];
@@ -89,86 +86,51 @@ const GlobalChat = ({ isVisible, onClose }) => {
         return () => { unsubscribeMsg(); unsubscribeStatus(); };
     }, [chatStatus, isMinimized, popupsEnabled, user.uid, isMuted]);
 
+    // Efeito para rolar para a última mensagem
     useEffect(() => { if (!isMinimized) { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); } }, [messages, isMinimized]);
 
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (newMessage.trim() === '') return;
-        setIsLoading(true);
-        const textToSend = newMessage;
-        setNewMessage('');
-        if (isAiSelected) {
-            try {
-                await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
-                const prompt = `Você é um assistente virtual da Equipe de Triunfo, especialista em 4Life e Marketing de Rede. Responda à seguinte pergunta de forma útil e objetiva, mantendo-se estritamente dentro desses tópicos. Pergunta do usuário: "${textToSend}"`;
-                const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), });
-                const data = await response.json();
-                await addDoc(collection(db, "chatMessages"), { text: data.text || "Não consegui processar a resposta.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() });
-            } catch (error) {
-                console.error("Erro ao interagir com a IA:", error);
-                 await addDoc(collection(db, "chatMessages"), { text: "Ocorreu um erro ao conectar com o assistente. Tente novamente.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() });
-            }
-        } else {
-            await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
-        }
-        setIsLoading(false);
-    };
-    
-    const handleEmojiSelect = (emoji) => {
-        setNewMessage(prev => prev + emoji);
-        setIsEmojiPickerVisible(false);
-    };
-
-    const getRoleColor = (role) => {
-        switch (role) {
-            case 'admin': return 'text-amber-400';
-            case 'ai': return 'text-cyan-400';
-            default: return 'text-slate-500 dark:text-slate-400';
-        }
-    };
-    
-    const getStatusIndicator = (state) => {
-        const color = state === 'online' ? 'bg-green-500' : 'bg-yellow-500';
-        return (
-            <span className="relative flex h-3 w-3">
-                {state === 'online' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${color} opacity-75`}></span>}
-                <span className={`relative inline-flex rounded-full h-3 w-3 ${color}`}></span>
-            </span>
-        );
-    };
+    const handleSendMessage = async (e) => { e.preventDefault(); if (newMessage.trim() === '') return; setIsLoading(true); const textToSend = newMessage; setNewMessage(''); if (isAiSelected) { try { await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() }); const prompt = `Você é um assistente virtual da Equipe de Triunfo, especialista em 4Life e Marketing de Rede. Responda à seguinte pergunta de forma útil e objetiva, mantendo-se estritamente dentro desses tópicos. Pergunta do usuário: "${textToSend}"`; const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), }); const data = await response.json(); await addDoc(collection(db, "chatMessages"), { text: data.text || "Não consegui processar a resposta.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() }); } catch (error) { console.error("Erro ao interagir com a IA:", error); await addDoc(collection(db, "chatMessages"), { text: "Ocorreu um erro ao conectar com o assistente. Tente novamente.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() }); } } else { await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() }); } setIsLoading(false); };
+    const handleEmojiSelect = (emoji) => { setNewMessage(prev => prev + emoji); setIsEmojiPickerVisible(false); };
+    const getRoleColor = (role) => { switch (role) { case 'admin': return 'text-amber-400'; case 'ai': return 'text-cyan-400'; default: return 'text-slate-500 dark:text-slate-400'; } };
+    const getStatusIndicator = (state) => { const color = state === 'online' ? 'bg-green-500' : 'bg-yellow-500'; return (<span className="relative flex h-3 w-3">{state === 'online' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${color} opacity-75`}></span>}<span className={`relative inline-flex rounded-full h-3 w-3 ${color}`}></span></span>); };
 
     if (!isVisible) return null;
 
     if (isMinimized) {
         return (
             <div className="fixed bottom-4 right-4 z-20">
-                {newNotification && (
-                    <div className="absolute bottom-20 right-0 w-72 bg-white dark:bg-slate-700 p-3 rounded-lg shadow-xl animate-fade-in">
-                        <p className={`font-bold text-sm ${getRoleColor(newNotification.role)}`}>{newNotification.name}</p>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 truncate">{newNotification.text}</p>
-                    </div>
-                )}
-                <button 
-                    onClick={() => setIsMinimized(false)} 
-                    className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
-                    title="Maximizar Chat"
-                >
-                    <ChatBubbleIcon />
-                </button>
+                {newNotification && (<div className="absolute bottom-20 right-0 w-72 bg-white dark:bg-slate-700 p-3 rounded-lg shadow-xl animate-fade-in"><p className={`font-bold text-sm ${getRoleColor(newNotification.role)}`}>{newNotification.name}</p><p className="text-sm text-slate-600 dark:text-slate-300 truncate">{newNotification.text}</p></div>)}
+                <button onClick={() => setIsMinimized(false)} className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform" title="Maximizar Chat"><ChatBubbleIcon /></button>
             </div>
         );
     }
     
     return (
-        <div className="fixed inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] flex flex-col bg-white dark:bg-indigo-900 md:rounded-lg shadow-2xl z-20 animate-fade-in">
-            {isOnlineListVisible && <OnlineUsersModal users={onlineUsers} onClose={() => setIsOnlineListVisible(false)} getRoleColor={getRoleColor} getStatusIndicator={getStatusIndicator} />}
+        <div className={`fixed inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] flex flex-col bg-white dark:bg-indigo-900 md:rounded-lg shadow-2xl z-20 animate-fade-in`}>
             <header className="p-4 border-b border-slate-200 dark:border-indigo-800 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-slate-800 dark:text-white">Chat Global</h2>
-                <div className="flex items-center gap-2">
-                    <button onClick={() => setIsMuted(!isMuted)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition" title={isMuted ? "Ativar Som" : "Mutar Som"}>{isMuted ? <SoundOffIcon /> : <SoundOnIcon />}</button>
-                    <button onClick={() => setIsOnlineListVisible(true)} className="p-1.5 bg-slate-100 dark:bg-indigo-800 rounded-full text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-indigo-700 transition"><UsersIcon /></button>
-                    <button onClick={() => setIsMinimized(true)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition" title="Minimizar"><MinimizeIcon /></button>
-                    <button onClick={onClose} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition md:hidden" title="Fechar">&times;</button>
+                <div className="group relative">
+                    <div className="flex items-center gap-2 cursor-pointer">
+                        <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
+                        <span className="font-bold text-slate-800 dark:text-white">Online ({onlineUsers.length})</span>
+                    </div>
+                    <div className="hidden group-hover:block absolute top-full mt-2 w-64 bg-white dark:bg-slate-800 shadow-lg rounded-lg p-2 border dark:border-slate-700">
+                        {onlineUsers.map(onlineUser => (
+                            <div key={onlineUser.uid} className="flex items-center gap-3 p-2 rounded-md">
+                                {getStatusIndicator(onlineUser.state)}
+                                <p className={`font-medium ${getRoleColor(onlineUser.role)}`}>{onlineUser.name}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 relative">
+                     <button onClick={() => setIsOptionsMenuVisible(!isOptionsMenuVisible)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition"><MoreVerticalIcon /></button>
+                     {isOptionsMenuVisible && (
+                        <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-800 shadow-lg rounded-lg border dark:border-slate-700 z-30">
+                            <button onClick={() => { setIsMuted(!isMuted); setIsOptionsMenuVisible(false); }} className="w-full text-left px-4 py-2 flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-indigo-800">{isMuted ? <SoundOnIcon/> : <SoundOffIcon/>} {isMuted ? "Ativar Som" : "Mutar Som"}</button>
+                            <button onClick={() => { setIsMinimized(true); setIsOptionsMenuVisible(false); }} className="w-full text-left px-4 py-2 flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-indigo-800"><MinimizeIcon/> Minimizar</button>
+                            <button onClick={() => { updateUserChatStatus('offline'); onClose(); }} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/50">Sair do Chat</button>
+                        </div>
+                     )}
                 </div>
             </header>
             <main className="flex-1 p-4 overflow-y-auto space-y-4">
