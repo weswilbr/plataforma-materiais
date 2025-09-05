@@ -1,11 +1,38 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão corrigida para ler os dados do utilizador diretamente do status de presença.
+// Versão com o novo layout radical, modal de utilizadores online e design moderno.
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, doc, getDoc } from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
+
+// --- Ícones SVG ---
+const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>;
+const AiIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>;
+const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+
+
+// Sub-componente para a lista de utilizadores online
+const OnlineUsersModal = ({ users, onClose, getRoleColor }) => (
+    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-10 flex justify-end" onClick={onClose}>
+        <div className="w-80 h-full bg-white dark:bg-slate-800 shadow-2xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-slate-800 dark:text-white mb-4">Online ({users.length})</h3>
+            <div className="flex-1 overflow-y-auto space-y-3">
+                {users.map(onlineUser => (
+                    <div key={onlineUser.uid} className="flex items-center gap-3">
+                        <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                        <p className={`font-medium ${getRoleColor(onlineUser.role)}`}>{onlineUser.name}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
 
 const GlobalChat = () => {
     const { user } = useAuth();
@@ -14,22 +41,19 @@ const GlobalChat = () => {
     const [newMessage, setNewMessage] = useState('');
     const [isAiSelected, setIsAiSelected] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isOnlineListVisible, setIsOnlineListVisible] = useState(false);
     const messagesEndRef = useRef(null);
 
-    // Efeito para buscar as mensagens em tempo real
     useEffect(() => {
         const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const msgs = [];
-            querySnapshot.forEach((doc) => {
-                msgs.push({ id: doc.id, ...doc.data() });
-            });
+            querySnapshot.forEach((doc) => { msgs.push({ id: doc.id, ...doc.data() }); });
             setMessages(msgs);
         });
         return () => unsubscribe();
     }, []);
 
-    // Efeito para buscar utilizadores online em tempo real (LÓGICA CORRIGIDA)
     useEffect(() => {
         const statusRef = ref(rtdb, '/status');
         const unsubscribe = onValue(statusRef, (snapshot) => {
@@ -37,13 +61,8 @@ const GlobalChat = () => {
             const online = [];
             if (statuses) {
                 for (const uid in statuses) {
-                    // Lê o nome e a role diretamente do status, sem precisar de uma nova busca.
                     if (statuses[uid].state === 'online') {
-                        online.push({
-                            uid,
-                            name: statuses[uid].name,
-                            role: statuses[uid].role,
-                        });
+                        online.push({ uid, name: statuses[uid].name, role: statuses[uid].role });
                     }
                 }
             }
@@ -52,16 +71,12 @@ const GlobalChat = () => {
         return () => unsubscribe();
     }, []);
 
-    // Efeito para rolar para a última mensagem
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (newMessage.trim() === '') return;
         setIsLoading(true);
-
         const textToSend = newMessage;
         setNewMessage('');
 
@@ -86,54 +101,52 @@ const GlobalChat = () => {
         switch (role) {
             case 'admin': return 'text-amber-400';
             case 'ai': return 'text-cyan-400';
-            default: return 'text-slate-300';
+            default: return 'text-slate-500 dark:text-slate-400';
         }
     };
 
     return (
-        <div className="h-full flex flex-col md:flex-row bg-white dark:bg-indigo-900 rounded-lg shadow-lg overflow-hidden">
-            <div className="h-full flex flex-1 flex-col">
-                <header className="p-4 border-b border-slate-200 dark:border-indigo-800">
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">Chat Global da Equipe</h2>
-                </header>
-                <main className="flex-1 p-4 overflow-y-auto space-y-4">
-                    {messages.map(msg => (
-                        <div key={msg.id} className={`flex ${msg.uid === user.uid ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`p-3 rounded-lg max-w-lg ${msg.uid === user.uid ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-indigo-800'}`}>
-                                <p className={`font-bold text-sm mb-1 ${getRoleColor(msg.role)}`}>{msg.name}</p>
-                                <p className="text-base">{msg.text}</p>
-                            </div>
+        <div className="h-full flex flex-col bg-white dark:bg-indigo-900 rounded-lg shadow-lg relative overflow-hidden">
+            {isOnlineListVisible && <OnlineUsersModal users={onlineUsers} onClose={() => setIsOnlineListVisible(false)} getRoleColor={getRoleColor} />}
+            
+            <header className="p-4 border-b border-slate-200 dark:border-indigo-800 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white">Chat Global da Equipe</h2>
+                <button onClick={() => setIsOnlineListVisible(true)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-indigo-800 rounded-full text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-indigo-700 transition">
+                    <UsersIcon />
+                    <span>Online ({onlineUsers.length})</span>
+                </button>
+            </header>
+
+            <main className="flex-1 p-4 overflow-y-auto space-y-4">
+                {messages.map(msg => (
+                    <div key={msg.id} className={`flex items-end gap-2 ${msg.uid === user.uid ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`p-3 rounded-2xl max-w-lg ${msg.uid === user.uid ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-indigo-800 rounded-bl-none'}`}>
+                            <p className={`font-bold text-sm mb-1 ${getRoleColor(msg.role)} ${msg.uid === user.uid ? 'hidden' : 'block'}`}>{msg.name}</p>
+                            <p className="text-base">{msg.text}</p>
                         </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                </main>
-                <footer className="p-4 border-t border-slate-200 dark:border-indigo-800">
-                    <form onSubmit={handleSendMessage} className="flex items-center gap-4">
-                        <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={isAiSelected ? "Pergunte algo para a IA..." : "Digite sua mensagem..."} className="flex-1 px-4 py-2 bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" disabled={isLoading} />
-                        <button type="submit" className="px-5 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition disabled:bg-slate-400" disabled={isLoading}>{isLoading ? 'Enviando...' : 'Enviar'}</button>
-                        <div className="flex items-center" title="Ativar/Desativar Assistente IA">
-                             <input type="checkbox" id="ai-toggle" checked={isAiSelected} onChange={() => setIsAiSelected(!isAiSelected)} className="w-5 h-5 text-cyan-400 bg-slate-200 border-slate-300 rounded focus:ring-cyan-500 dark:focus:ring-cyan-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer" />
-                             <label htmlFor="ai-toggle" className="ml-2 text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">Falar com IA</label>
-                        </div>
-                    </form>
-                </footer>
-            </div>
-            <aside className="w-full md:w-64 border-l border-slate-200 dark:border-indigo-800 flex flex-col">
-                <header className="p-4 border-b border-slate-200 dark:border-indigo-800">
-                    <h3 className="font-bold text-slate-800 dark:text-white">Online ({onlineUsers.length})</h3>
-                </header>
-                <div className="flex-1 p-4 overflow-y-auto space-y-3">
-                    {onlineUsers.map(onlineUser => (
-                        <div key={onlineUser.uid} className="flex items-center gap-3">
-                            <span className="relative flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                            </span>
-                            <p className={`font-medium ${getRoleColor(onlineUser.role)}`}>{onlineUser.name}</p>
-                        </div>
-                    ))}
-                </div>
-            </aside>
+                    </div>
+                ))}
+                <div ref={messagesEndRef} />
+            </main>
+            
+            <footer className="p-4 border-t border-slate-200 dark:border-indigo-800">
+                <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                    <button type="button" onClick={() => setIsAiSelected(!isAiSelected)} className={`p-2 rounded-full transition ${isAiSelected ? 'bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-indigo-800 text-slate-500 dark:text-slate-300'}`} title="Falar com a IA">
+                        <AiIcon />
+                    </button>
+                    <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder={isAiSelected ? "Pergunte algo para a IA..." : "Digite sua mensagem..."}
+                        className="flex-1 px-4 py-2 bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-full focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                        disabled={isLoading}
+                    />
+                    <button type="submit" className="p-2.5 font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 transition disabled:bg-slate-400" disabled={isLoading}>
+                       <SendIcon />
+                    </button>
+                </form>
+            </footer>
         </div>
     );
 };
