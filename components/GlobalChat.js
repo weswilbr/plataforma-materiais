@@ -1,12 +1,12 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão redesenhada como um widget flutuante e independente.
+// Versão com a funcionalidade de emojis e aviso sonoro.
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
-import { SendIcon, AiIcon, UsersIcon, MinimizeIcon, ChatBubbleIcon, OnlineUsersModal } from './chat/ChatUI';
+import { SendIcon, AiIcon, UsersIcon, MinimizeIcon, ChatBubbleIcon, OnlineUsersModal, EmojiIcon, EmojiPicker } from './chat/ChatUI';
 
 const GlobalChat = ({ isVisible, onClose }) => {
     const { user, chatStatus, updateUserChatStatus } = useAuth();
@@ -19,6 +19,7 @@ const GlobalChat = ({ isVisible, onClose }) => {
     const [isMinimized, setIsMinimized] = useState(false);
     const [newNotification, setNewNotification] = useState(null);
     const [popupsEnabled, setPopupsEnabled] = useState(true);
+    const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
     const messagesEndRef = useRef(null);
     const notificationSound = useRef(null);
 
@@ -66,11 +67,11 @@ const GlobalChat = ({ isVisible, onClose }) => {
             
             const lastMessage = msgs[msgs.length - 1];
             if (hasNewMessage && lastMessage && lastMessage.uid !== user.uid) {
+                if (popupsEnabled && notificationSound.current) {
+                    notificationSound.current.triggerAttackRelease("C5", "8n");
+                }
                 if (isMinimized && popupsEnabled) {
                     setNewNotification(lastMessage);
-                    if (notificationSound.current) {
-                        notificationSound.current.triggerAttackRelease("C5", "8n");
-                    }
                     setTimeout(() => setNewNotification(null), 5000);
                 }
             }
@@ -109,7 +110,6 @@ const GlobalChat = ({ isVisible, onClose }) => {
         setIsLoading(true);
         const textToSend = newMessage;
         setNewMessage('');
-
         if (isAiSelected) {
             try {
                 await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
@@ -125,6 +125,11 @@ const GlobalChat = ({ isVisible, onClose }) => {
             await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
         }
         setIsLoading(false);
+    };
+
+    const handleEmojiSelect = (emoji) => {
+        setNewMessage(prev => prev + emoji);
+        setIsEmojiPickerVisible(false);
     };
 
     const getRoleColor = (role) => {
@@ -190,7 +195,8 @@ const GlobalChat = ({ isVisible, onClose }) => {
                 ))}
                 <div ref={messagesEndRef} />
             </main>
-            <footer className="p-4 border-t border-slate-200 dark:border-indigo-800">
+            <footer className="p-4 border-t border-slate-200 dark:border-indigo-800 relative">
+                 {isEmojiPickerVisible && <EmojiPicker onEmojiSelect={handleEmojiSelect} />}
                  <div className="flex items-center justify-center mb-2">
                     <label htmlFor="popups-toggle" className="flex items-center cursor-pointer text-xs text-slate-500 dark:text-slate-400">
                         <input type="checkbox" id="popups-toggle" checked={popupsEnabled} onChange={() => setPopupsEnabled(!popupsEnabled)} className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600"/>
@@ -198,6 +204,7 @@ const GlobalChat = ({ isVisible, onClose }) => {
                     </label>
                 </div>
                 <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                    <button type="button" onClick={() => setIsEmojiPickerVisible(!isEmojiPickerVisible)} className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-800 transition" title="Inserir Emoji"><EmojiIcon /></button>
                     <button type="button" onClick={() => setIsAiSelected(!isAiSelected)} className={`p-2 rounded-full transition ${isAiSelected ? 'bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-indigo-800 text-slate-500 dark:text-slate-300'}`} title="Falar com a IA"><AiIcon /></button>
                     <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={isAiSelected ? "Pergunte algo para a IA..." : "Digite sua mensagem..."} className="flex-1 px-4 py-2 bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-full focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" disabled={isLoading} />
                     <button type="submit" className="p-2.5 font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 transition disabled:bg-slate-400" disabled={isLoading}><SendIcon /></button>
