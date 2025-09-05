@@ -4,12 +4,12 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getDatabase } from "firebase/database"; // Importa a Realtime Database
+import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  // Adicione a sua databaseURL aqui, que você encontra nas configurações do projeto > Realtime Database
+  // [IMPORTANTE] Adiciona a URL da sua Realtime Database
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL, 
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
@@ -26,7 +26,7 @@ if (!getApps().length) {
 
 const auth = getAuth(app);
 const db = getFirestore(app);
-const rtdb = getDatabase(app); // Inicializa a Realtime Database
+const rtdb = getDatabase(app);
 
-export { auth, db, rtdb }; // Exporta a nova instância
+export { auth, db, rtdb };
 
