@@ -1,17 +1,16 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão com o novo layout radical, modal de utilizadores online e design moderno.
+// Versão com a nova tela de "Entrar no Chat" para controlar a presença online.
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, doc, getDoc } from 'firebase/firestore';
-import { ref, onValue } from "firebase/database";
+import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { ref, onValue, set, onDisconnect } from "firebase/database";
 
 // --- Ícones SVG ---
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>;
 const AiIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>;
 const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
-
 
 // Sub-componente para a lista de utilizadores online
 const OnlineUsersModal = ({ users, onClose, getRoleColor }) => (
@@ -33,7 +32,6 @@ const OnlineUsersModal = ({ users, onClose, getRoleColor }) => (
     </div>
 );
 
-
 const GlobalChat = () => {
     const { user } = useAuth();
     const [messages, setMessages] = useState([]);
@@ -42,21 +40,22 @@ const GlobalChat = () => {
     const [isAiSelected, setIsAiSelected] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isOnlineListVisible, setIsOnlineListVisible] = useState(false);
+    const [hasJoinedChat, setHasJoinedChat] = useState(false); // Novo estado
     const messagesEndRef = useRef(null);
 
+    // Efeitos de busca de dados (só rodam se o utilizador entrou no chat)
     useEffect(() => {
+        if (!hasJoinedChat) return;
+
         const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const unsubscribeMsg = onSnapshot(q, (querySnapshot) => {
             const msgs = [];
             querySnapshot.forEach((doc) => { msgs.push({ id: doc.id, ...doc.data() }); });
             setMessages(msgs);
         });
-        return () => unsubscribe();
-    }, []);
 
-    useEffect(() => {
         const statusRef = ref(rtdb, '/status');
-        const unsubscribe = onValue(statusRef, (snapshot) => {
+        const unsubscribeStatus = onValue(statusRef, (snapshot) => {
             const statuses = snapshot.val();
             const online = [];
             if (statuses) {
@@ -68,10 +67,27 @@ const GlobalChat = () => {
             }
             setOnlineUsers(online);
         });
-        return () => unsubscribe();
-    }, []);
+
+        return () => {
+            unsubscribeMsg();
+            unsubscribeStatus();
+        };
+    }, [hasJoinedChat]);
 
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+    const handleJoinChat = () => {
+        if (!user) return;
+        const userStatusRef = ref(rtdb, '/status/' + user.uid);
+        
+        onValue(ref(rtdb, '.info/connected'), (snapshot) => {
+            if (snapshot.val() === false) return;
+            onDisconnect(userStatusRef).set({ state: 'offline', last_changed: serverTimestamp() }).then(() => {
+                set(userStatusRef, { state: 'online', name: user.name, role: user.role, last_changed: serverTimestamp() });
+                setHasJoinedChat(true); // Ativa a interface do chat
+            });
+        });
+    };
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -105,6 +121,25 @@ const GlobalChat = () => {
         }
     };
 
+    // TELA DE ENTRADA NO CHAT
+    if (!hasJoinedChat) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center bg-white dark:bg-indigo-900 rounded-lg shadow-lg p-8 text-center">
+                <h2 className="text-3xl font-bold text-slate-800 dark:text-white">Comunidade da Equipe</h2>
+                <p className="mt-4 text-lg text-slate-600 dark:text-slate-300 max-w-md">
+                    Conecte-se com outros membros da equipe, troque ideias e tire dúvidas em tempo real.
+                </p>
+                <button 
+                    onClick={handleJoinChat}
+                    className="mt-8 px-8 py-3 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105"
+                >
+                    Entrar no Chat e Ficar Online
+                </button>
+            </div>
+        );
+    }
+    
+    // INTERFACE PRINCIPAL DO CHAT
     return (
         <div className="h-full flex flex-col bg-white dark:bg-indigo-900 rounded-lg shadow-lg relative overflow-hidden">
             {isOnlineListVisible && <OnlineUsersModal users={onlineUsers} onClose={() => setIsOnlineListVisible(false)} getRoleColor={getRoleColor} />}

@@ -1,11 +1,11 @@
 // NOME DO ARQUIVO: contexts/AuthContext.js
-// Versão corrigida que grava o nome e a role do utilizador no status de presença.
+// Versão que remove a gestão de presença automática no login.
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db, rtdb } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { ref, onValue, set, onDisconnect, serverTimestamp } from "firebase/database";
+import { ref, set, serverTimestamp } from "firebase/database";
 
 const AuthContext = createContext();
 
@@ -24,27 +24,9 @@ export function AuthProvider({ children }) {
                 const userDoc = await getDoc(userDocRef);
                 
                 if (userDoc.exists()) {
-                    const userData = { uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() };
-                    setUser(userData);
-
-                    const userStatusRef = ref(rtdb, '/status/' + firebaseUser.uid);
-                    
-                    onValue(ref(rtdb, '.info/connected'), (snapshot) => {
-                        if (snapshot.val() === false) {
-                            return;
-                        }
-                        // Quando o utilizador se desconectar, o Firebase irá marcá-lo como offline.
-                        onDisconnect(userStatusRef).set({ state: 'offline', last_changed: serverTimestamp() }).then(() => {
-                            // [CORREÇÃO] Quando o utilizador se conectar, grava o seu estado, nome e role.
-                            set(userStatusRef, { 
-                                state: 'online', 
-                                name: userData.name,
-                                role: userData.role,
-                                last_changed: serverTimestamp() 
-                            });
-                        });
-                    });
+                    setUser({ uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() });
                 } else {
+                    // Se o utilizador está autenticado mas não tem perfil, desloga por segurança.
                     signOut(auth);
                     setUser(null);
                 }
@@ -76,6 +58,7 @@ export function AuthProvider({ children }) {
     };
     
     const logout = () => {
+        // Garante que o utilizador é marcado como offline ao deslogar.
         if(auth.currentUser) {
             const userStatusRef = ref(rtdb, '/status/' + auth.currentUser.uid);
             set(userStatusRef, { state: 'offline', last_changed: serverTimestamp() });
