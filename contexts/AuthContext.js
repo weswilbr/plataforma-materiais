@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: contexts/AuthContext.js
-// Lógica de autenticação que agora gere o status de presença online.
+// Versão corrigida que grava o nome e a role do utilizador no status de presença.
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
@@ -33,8 +33,15 @@ export function AuthProvider({ children }) {
                         if (snapshot.val() === false) {
                             return;
                         }
+                        // Quando o utilizador se desconectar, o Firebase irá marcá-lo como offline.
                         onDisconnect(userStatusRef).set({ state: 'offline', last_changed: serverTimestamp() }).then(() => {
-                            set(userStatusRef, { state: 'online', name: userData.name, role: userData.role, last_changed: serverTimestamp() });
+                            // Quando o utilizador se conectar, grava o seu estado, nome e role.
+                            set(userStatusRef, { 
+                                state: 'online', 
+                                name: userData.name, // <-- CORREÇÃO
+                                role: userData.role, // <-- CORREÇÃO
+                                last_changed: serverTimestamp() 
+                            });
                         });
                     });
                 } else {
