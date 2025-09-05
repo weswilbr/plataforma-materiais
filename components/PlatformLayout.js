@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Versão com o novo componente InviteManager para administradores.
+// Versão final com novo design, menus recolhidos e navegação direta para produtos.
 
 import { useState } from 'react';
 import Image from 'next/image';
@@ -13,56 +13,6 @@ import {
 } from './MaterialPresenters';
 
 import { materialsMap } from '../data/materials';
-
-// --- [NOVO] Componente para a Gestão de Convites ---
-const InviteManager = () => {
-    const [inviteLink, setInviteLink] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [message, setMessage] = useState('');
-
-    const generateInvite = async () => {
-        setIsLoading(true);
-        setMessage('');
-        try {
-            const response = await fetch('/api/handle-invite', { method: 'POST' });
-            const data = await response.json();
-            if(!response.ok) throw new Error(data.error);
-
-            const newLink = `${window.location.origin}/?invite=${data.inviteCode}`;
-            setInviteLink(newLink);
-            setMessage('Link de convite gerado com sucesso!');
-        } catch (error) {
-            setMessage(`Erro: ${error.message}`);
-        }
-        setIsLoading(false);
-    };
-    
-    const copyLink = () => {
-        navigator.clipboard.writeText(inviteLink);
-        setMessage('Link copiado para a área de transferência!');
-        setTimeout(() => setMessage(''), 3000);
-    };
-
-    return (
-        <div>
-             <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Gerir Convites</h2>
-             <div className="bg-white dark:bg-indigo-900 p-6 rounded-lg shadow-lg">
-                <p className="text-slate-600 dark:text-slate-300">Gere um novo link de convite único para adicionar um novo membro à plataforma. Partilhe o link diretamente com a pessoa que deseja convidar.</p>
-                <button onClick={generateInvite} disabled={isLoading} className="mt-4 w-full md:w-auto px-5 py-2.5 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition disabled:bg-slate-400">
-                    {isLoading ? 'A gerar...' : 'Gerar Novo Link de Convite'}
-                </button>
-                {inviteLink && (
-                    <div className="mt-6 p-4 bg-slate-100 dark:bg-indigo-800 rounded-lg flex items-center justify-between">
-                        <p className="text-sm text-slate-700 dark:text-slate-200 truncate">{inviteLink}</p>
-                        <button onClick={copyLink} className="ml-4 px-4 py-1.5 font-semibold text-sm text-white bg-green-600 rounded-lg hover:bg-green-700">Copiar</button>
-                    </div>
-                )}
-                 {message && <p className="mt-4 text-sm text-center">{message}</p>}
-             </div>
-        </div>
-    )
-};
-
 
 const PlatformLayout = () => {
     const [activeCommand, setActiveCommand] = useState('inicio');
@@ -92,8 +42,7 @@ const PlatformLayout = () => {
         'canais': { title: 'Canais' },
         'admin_panel': { title: 'Painel de Controle' },
         'manage_users': { title: 'Gerenciar Usuários' },
-        'view_stats': { title: 'Ver Estatísticas' },
-        'manage_invites': { title: 'Gerir Convites' }, // Adicionado o novo comando
+        'view_stats': { title: 'Ver Estatísticas' }
     };
 
     const getMenuItems = (role) => {
@@ -105,8 +54,7 @@ const PlatformLayout = () => {
             "📣 Materiais Promocionais": ['folheteria', 'artes', 'canais'],
         };
         if (role === 'admin') {
-            // Adicionado 'manage_invites' ao menu de admin
-            baseMenu["👑 Painel de Admin"] = ['admin_panel', 'manage_users', 'view_stats', 'manage_invites'];
+            baseMenu["👑 Painel de Admin"] = ['admin_panel', 'manage_users', 'view_stats'];
         }
         return baseMenu;
     };
@@ -132,7 +80,6 @@ const PlatformLayout = () => {
         switch (activeCommand) {
             case 'inicio': return <WelcomeScreen />;
             case 'convite': return <InviteGenerator />;
-            case 'manage_invites': return <InviteManager />; // Adicionado o case para o novo componente
             case 'apresentacao': return <OpportunityPresenter />;
             case 'bonusconstrutor': return <BonusBuilderPresenter />;
             case 'fabrica4life': return <FactoryPresenter />;
@@ -232,3 +179,4 @@ const PlatformLayout = () => {
 };
 
 export default PlatformLayout;
+
