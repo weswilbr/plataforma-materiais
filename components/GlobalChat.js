@@ -1,12 +1,12 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão com a funcionalidade de emojis e aviso sonoro.
+// Versão com a funcionalidade de minimizar, pop-ups de novas mensagens e controlo de notificações.
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
-import { SendIcon, AiIcon, UsersIcon, MinimizeIcon, ChatBubbleIcon, OnlineUsersModal, EmojiIcon, EmojiPicker } from './chat/ChatUI';
+import { SendIcon, AiIcon, UsersIcon, MinimizeIcon, ChatBubbleIcon, OnlineUsersModal, EmojiIcon, EmojiPicker, SoundOnIcon, SoundOffIcon } from './chat/ChatUI';
 
 const GlobalChat = ({ isVisible, onClose }) => {
     const { user, chatStatus, updateUserChatStatus } = useAuth();
@@ -19,6 +19,7 @@ const GlobalChat = ({ isVisible, onClose }) => {
     const [isMinimized, setIsMinimized] = useState(false);
     const [newNotification, setNewNotification] = useState(null);
     const [popupsEnabled, setPopupsEnabled] = useState(true);
+    const [isMuted, setIsMuted] = useState(false);
     const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
     const messagesEndRef = useRef(null);
     const notificationSound = useRef(null);
@@ -31,27 +32,23 @@ const GlobalChat = ({ isVisible, onClose }) => {
         script.onload = () => {
             const startAudio = () => {
                 window.Tone.start();
-                notificationSound.current = new window.Tone.Synth().toDestination();
+                notificationSound.current = new window.Tone.Synth({
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 }
+                }).toDestination();
                 document.body.removeEventListener('click', startAudio);
             };
             document.body.addEventListener('click', startAudio);
         };
         document.body.appendChild(script);
         return () => {
-            if (script.parentNode) {
-                document.body.removeChild(script);
-            }
+            if (script.parentNode) { document.body.removeChild(script); }
         };
     }, []);
 
     useEffect(() => {
-        if (chatStatus === 'offline') {
-            setMessages([]);
-            return;
-        }
-
+        if (chatStatus === 'offline') return;
         let lastMessageTimestamp = null;
-
         const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
         const unsubscribeMsg = onSnapshot(q, (querySnapshot) => {
             const msgs = [];
@@ -64,11 +61,10 @@ const GlobalChat = ({ isVisible, onClose }) => {
                     lastMessageTimestamp = msgData.timestamp;
                 }
             });
-            
             const lastMessage = msgs[msgs.length - 1];
             if (hasNewMessage && lastMessage && lastMessage.uid !== user.uid) {
-                if (popupsEnabled && notificationSound.current) {
-                    notificationSound.current.triggerAttackRelease("C5", "8n");
+                if (!isMuted && notificationSound.current) {
+                    notificationSound.current.triggerAttackRelease("G5", "8n", window.Tone.now());
                 }
                 if (isMinimized && popupsEnabled) {
                     setNewNotification(lastMessage);
@@ -80,8 +76,7 @@ const GlobalChat = ({ isVisible, onClose }) => {
 
         const statusRef = ref(rtdb, '/status');
         const unsubscribeStatus = onValue(statusRef, (snapshot) => {
-            const statuses = snapshot.val();
-            const online = [];
+            const statuses = snapshot.val(); const online = [];
             if (statuses) {
                 for (const uid in statuses) {
                     if (statuses[uid].state === 'online' || statuses[uid].state === 'busy') {
@@ -91,18 +86,10 @@ const GlobalChat = ({ isVisible, onClose }) => {
             }
             setOnlineUsers(online);
         });
+        return () => { unsubscribeMsg(); unsubscribeStatus(); };
+    }, [chatStatus, isMinimized, popupsEnabled, user.uid, isMuted]);
 
-        return () => { 
-            unsubscribeMsg(); 
-            unsubscribeStatus(); 
-        };
-    }, [chatStatus, isMinimized, popupsEnabled, user.uid]);
-
-    useEffect(() => { 
-        if(!isMinimized) {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); 
-        }
-    }, [messages, isMinimized]);
+    useEffect(() => { if (!isMinimized) { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); } }, [messages, isMinimized]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -126,7 +113,7 @@ const GlobalChat = ({ isVisible, onClose }) => {
         }
         setIsLoading(false);
     };
-
+    
     const handleEmojiSelect = (emoji) => {
         setNewMessage(prev => prev + emoji);
         setIsEmojiPickerVisible(false);
@@ -173,15 +160,15 @@ const GlobalChat = ({ isVisible, onClose }) => {
     }
     
     return (
-        <div className="fixed bottom-4 right-4 w-96 h-[600px] flex flex-col bg-white dark:bg-indigo-900 rounded-lg shadow-2xl z-20 animate-fade-in">
+        <div className="fixed inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] flex flex-col bg-white dark:bg-indigo-900 md:rounded-lg shadow-2xl z-20 animate-fade-in">
             {isOnlineListVisible && <OnlineUsersModal users={onlineUsers} onClose={() => setIsOnlineListVisible(false)} getRoleColor={getRoleColor} getStatusIndicator={getStatusIndicator} />}
             <header className="p-4 border-b border-slate-200 dark:border-indigo-800 flex justify-between items-center">
                 <h2 className="text-xl font-bold text-slate-800 dark:text-white">Chat Global</h2>
                 <div className="flex items-center gap-2">
-                    <button onClick={() => updateUserChatStatus(chatStatus === 'online' ? 'busy' : 'online')} className={`px-3 py-1.5 text-sm font-medium rounded-full transition ${chatStatus === 'busy' ? 'bg-yellow-500' : 'bg-green-500'} text-white`}>{chatStatus === 'busy' ? 'Ocupado' : 'Disponível'}</button>
-                    <button onClick={() => { updateUserChatStatus('offline'); onClose(); }} className="text-sm font-medium text-red-500 hover:underline">Sair</button>
+                    <button onClick={() => setIsMuted(!isMuted)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition" title={isMuted ? "Ativar Som" : "Mutar Som"}>{isMuted ? <SoundOffIcon /> : <SoundOnIcon />}</button>
                     <button onClick={() => setIsOnlineListVisible(true)} className="p-1.5 bg-slate-100 dark:bg-indigo-800 rounded-full text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-indigo-700 transition"><UsersIcon /></button>
                     <button onClick={() => setIsMinimized(true)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition" title="Minimizar"><MinimizeIcon /></button>
+                    <button onClick={onClose} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition md:hidden" title="Fechar">&times;</button>
                 </div>
             </header>
             <main className="flex-1 p-4 overflow-y-auto space-y-4">
