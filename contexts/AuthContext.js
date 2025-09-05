@@ -3,9 +3,9 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
-import { auth, db, rtdb } from '../firebase'; // Importa a rtdb
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { ref, onValue, set, onDisconnect, serverTimestamp } from "firebase/database"; // Importa funções da rtdb
+import { auth, db, rtdb } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { ref, onValue, set, onDisconnect, serverTimestamp } from "firebase/database";
 
 const AuthContext = createContext();
 
@@ -23,25 +23,21 @@ export function AuthProvider({ children }) {
                 const userDocRef = doc(db, "users", firebaseUser.uid);
                 const userDoc = await getDoc(userDocRef);
                 
-                const userStatusRef = ref(rtdb, '/status/' + firebaseUser.uid);
-
                 if (userDoc.exists()) {
                     const userData = { uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() };
                     setUser(userData);
 
-                    // Lógica de Presença Online
+                    const userStatusRef = ref(rtdb, '/status/' + firebaseUser.uid);
+                    
                     onValue(ref(rtdb, '.info/connected'), (snapshot) => {
                         if (snapshot.val() === false) {
                             return;
                         }
                         onDisconnect(userStatusRef).set({ state: 'offline', last_changed: serverTimestamp() }).then(() => {
-                            set(userStatusRef, { state: 'online', last_changed: serverTimestamp() });
+                            set(userStatusRef, { state: 'online', name: userData.name, role: userData.role, last_changed: serverTimestamp() });
                         });
                     });
                 } else {
-                    console.error("Utilizador autenticado mas sem perfil no Firestore.");
-                    // Para login com Google, poderíamos criar um perfil aqui.
-                    // Como o registo é fechado, vamos apenas deslogar.
                     signOut(auth);
                     setUser(null);
                 }
@@ -68,7 +64,6 @@ export function AuthProvider({ children }) {
             await sendPasswordResetEmail(auth, email);
             return { success: true };
         } catch (error) {
-            console.error("Erro ao redefinir senha:", error.code);
             return { success: false, error: "Não foi possível enviar o email de recuperação." };
         }
     };
