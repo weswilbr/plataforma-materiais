@@ -1,10 +1,10 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Componente do chat em tempo real com integração da IA e lista de utilizadores online.
+// Versão corrigida para ler os dados do utilizador diretamente do status de presença.
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
 
 const GlobalChat = () => {
@@ -29,20 +29,21 @@ const GlobalChat = () => {
         return () => unsubscribe();
     }, []);
 
-    // Efeito para buscar utilizadores online em tempo real
+    // Efeito para buscar utilizadores online em tempo real (LÓGICA CORRIGIDA)
     useEffect(() => {
         const statusRef = ref(rtdb, '/status');
-        const unsubscribe = onValue(statusRef, async (snapshot) => {
+        const unsubscribe = onValue(statusRef, (snapshot) => {
             const statuses = snapshot.val();
             const online = [];
             if (statuses) {
                 for (const uid in statuses) {
+                    // Lê o nome e a role diretamente do status, sem precisar de uma nova busca.
                     if (statuses[uid].state === 'online') {
-                        // Busca o perfil do utilizador para obter o nome e a role
-                         const userDoc = await getDoc(doc(db, "users", uid));
-                         if(userDoc.exists()) {
-                            online.push({ uid, ...userDoc.data() });
-                         }
+                        online.push({
+                            uid,
+                            name: statuses[uid].name,
+                            role: statuses[uid].role,
+                        });
                     }
                 }
             }
