@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/chat/ChatUI.js
-// Contém os sub-componentes visuais e ícones utilizados pelo chat.
+// Contém os sub-componentes visuais e ícones utilizados pelo chat, agora com o seletor de emojis.
 
 import React from 'react';
 
@@ -9,6 +9,27 @@ export const AiIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" h
 export const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
 export const MinimizeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>;
 export const ChatBubbleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>;
+export const EmojiIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" x2="9.01" y1="9" y2="9"></line><line x1="15" x2="15.01" y1="9" y2="9"></line></svg>;
+
+// --- Sub-componente para o seletor de emojis ---
+export const EmojiPicker = ({ onEmojiSelect }) => {
+    const emojis = ['😀', '😂', '😍', '🤔', '👍', '🙏', '🔥', '🚀', '🎉', '❤️', '👏', '💡'];
+    return (
+        <div className="absolute bottom-20 left-4 bg-white dark:bg-slate-700 p-2 rounded-lg shadow-xl border dark:border-slate-600">
+            <div className="grid grid-cols-6 gap-2">
+                {emojis.map(emoji => (
+                    <button 
+                        key={emoji} 
+                        onClick={() => onEmojiSelect(emoji)}
+                        className="text-2xl p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-600 transition"
+                    >
+                        {emoji}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 // --- Sub-componente para a lista de utilizadores online ---
 export const OnlineUsersModal = ({ users, onClose, getRoleColor, getStatusIndicator }) => (
