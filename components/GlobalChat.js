@@ -46,6 +46,12 @@ const GlobalChat = ({ isVisible, onClose }) => {
         if (chatStatus === 'offline') return;
         let lastMessageTimestamp = null;
 
+        // SUGESTÃO DE MELHORIA: Implementar Paginação/Scroll Infinito para performance.
+        // Para otimizar, em vez de carregar todas as mensagens, pode-se usar `limit()` para buscar apenas as últimas 50 mensagens.
+        // Exemplo: const q = query(collection(db, "chatMessages"), orderBy("timestamp", "desc"), limit(50));
+        // Depois, para carregar mais mensagens (quando o utilizador rola para cima), pode usar `startAfter()` com a referência da
+        // mensagem mais antiga carregada. Isto exigiria guardar a referência do documento no estado e adicionar um handler para o evento de scroll.
+
         const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
         const unsubscribeMsg = onSnapshot(q, (querySnapshot) => {
             const msgs = [];

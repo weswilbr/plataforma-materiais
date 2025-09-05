@@ -1,7 +1,7 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Versão com o novo Chat flutuante e independente.
+// Versão com o novo Chat flutuante, alternador de tema e placeholder de pesquisa.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import InviteGenerator from './InviteGenerator';
@@ -13,6 +13,40 @@ import {
     RankingPresenter, ChannelsPresenter, MaterialCard, ArtsPresenter
 } from './MaterialPresenters';
 import { materialsMap } from '../data/materials';
+
+// --- Componente para alternar o tema ---
+const ThemeSwitcher = () => {
+    const [theme, setTheme] = useState('light');
+
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        setTheme(savedTheme);
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, []);
+
+    const toggleTheme = () => {
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+        if (newTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    };
+
+    return (
+        <button onClick={toggleTheme} className="w-full flex items-center justify-between text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+            <span>Mudar Tema</span>
+            <span className="text-xl">{theme === 'light' ? '🌙' : '☀️'}</span>
+        </button>
+    );
+};
+
 
 const PlatformLayout = () => {
     const [activeCommand, setActiveCommand] = useState('inicio');
@@ -178,7 +212,10 @@ const PlatformLayout = () => {
                         })}
                     </nav>
                 </div>
-                <button onClick={logout} className="w-full mt-6 text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50">Sair da Conta</button>
+                <div>
+                    <ThemeSwitcher />
+                    <button onClick={logout} className="w-full mt-2 text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50">Sair da Conta</button>
+                </div>
             </aside>
             
             <main className="md:ml-80 h-screen flex flex-col">
@@ -189,6 +226,17 @@ const PlatformLayout = () => {
                     </button>
                  </header>
                  <div className="flex-grow p-6 md:p-10 overflow-y-auto">
+                    {/* Placeholder para a barra de pesquisa */}
+                    <div className="relative mb-6">
+                        <input
+                            type="text"
+                            placeholder="Pesquisar materiais..."
+                            className="w-full p-3 pl-10 bg-slate-100 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white disabled:opacity-50"
+                            disabled // Esta funcionalidade será implementada no futuro
+                        />
+                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+
                     {renderContent()}
                  </div>
             </main>
