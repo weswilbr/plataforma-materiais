@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Versão final com novo design, menus recolhidos e navegação direta para produtos.
+// Versão com o novo Chat flutuante e independente.
 
 import { useState } from 'react';
 import Image from 'next/image';
@@ -12,14 +12,14 @@ import {
     ProductBrowser, OpportunityPresenter, BonusBuilderPresenter, TablesPresenter, GlossaryPresenter,
     RankingPresenter, ChannelsPresenter, MaterialCard, ArtsPresenter
 } from './MaterialPresenters';
-
 import { materialsMap } from '../data/materials';
 
 const PlatformLayout = () => {
     const [activeCommand, setActiveCommand] = useState('inicio');
     const [selectedProductId, setSelectedProductId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const { user, logout } = useAuth();
+    const { user, logout, chatStatus, updateUserChatStatus } = useAuth();
+    const [isChatVisible, setIsChatVisible] = useState(false);
 
     const commandMap = {
         'inicio': { title: 'Início' },
@@ -46,7 +46,7 @@ const PlatformLayout = () => {
         'manage_users': { title: 'Gerenciar Usuários' },
         'view_stats': { title: 'Ver Estatísticas' }
     };
-
+    
     const getMenuItems = (role) => {
         const baseMenu = {
             "🏠 Início": ['inicio'],
@@ -71,6 +71,14 @@ const PlatformLayout = () => {
     };
 
     const handleMenuClick = (command) => {
+        if (command === 'chat') {
+            if (chatStatus === 'offline') {
+                updateUserChatStatus('online');
+            }
+            setIsChatVisible(!isChatVisible);
+            setIsSidebarOpen(false);
+            return;
+        }
         setActiveCommand(command);
         setSelectedProductId(null);
         setIsSidebarOpen(false);
@@ -80,13 +88,9 @@ const PlatformLayout = () => {
         if (activeCommand === 'produtos') {
             return <ProductBrowser key={selectedProductId} initialProductId={selectedProductId} onBack={() => handleMenuClick('inicio')} />;
         }
-        if (activeCommand === 'chat') {
-            return <GlobalChat />;
-        }
         
-        // Outros componentes são envolvidos por um container de padding
         return (
-            <div className="p-6 md:p-10">
+             <div className="animate-fade-in">
                 {(() => {
                     switch (activeCommand) {
                         case 'inicio': return <WelcomeScreen />;
@@ -184,10 +188,15 @@ const PlatformLayout = () => {
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
                  </header>
-                 <div className={`flex-grow overflow-y-auto ${activeCommand === 'chat' ? 'p-0' : ''}`}>
+                 <div className="flex-grow p-6 md:p-10 overflow-y-auto">
                     {renderContent()}
                  </div>
             </main>
+
+            {/* O Chat agora é renderizado aqui, de forma independente */}
+            {chatStatus !== 'offline' && (
+                <GlobalChat isVisible={isChatVisible} onClose={() => setIsChatVisible(false)} />
+            )}
         </div>
     );
 };

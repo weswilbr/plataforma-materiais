@@ -1,11 +1,11 @@
 // NOME DO ARQUIVO: contexts/AuthContext.js
-// Versão que remove a gestão de presença automática no login.
+// Versão com a nova gestão de estado para o chat independente.
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db, rtdb } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { ref, set, serverTimestamp } from "firebase/database";
+import { ref, set, serverTimestamp, onDisconnect } from "firebase/database";
 
 const AuthContext = createContext();
 
@@ -16,6 +16,7 @@ export function useAuth() {
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [chatStatus, setChatStatus] = useState('offline'); // Novo estado: offline, online, busy
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -25,8 +26,10 @@ export function AuthProvider({ children }) {
                 
                 if (userDoc.exists()) {
                     setUser({ uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() });
+                    // Configura a desconexão automática
+                    const userStatusRef = ref(rtdb, '/status/' + firebaseUser.uid);
+                    onDisconnect(userStatusRef).set({ state: 'offline', last_changed: serverTimestamp() });
                 } else {
-                    // Se o utilizador está autenticado mas não tem perfil, desloga por segurança.
                     signOut(auth);
                     setUser(null);
                 }
@@ -38,12 +41,18 @@ export function AuthProvider({ children }) {
         return () => unsubscribe();
     }, []);
 
+    const updateUserChatStatus = (state) => {
+        if (!user) return;
+        const userStatusRef = ref(rtdb, '/status/' + user.uid);
+        set(userStatusRef, { state, name: user.name, role: user.role, last_changed: serverTimestamp() });
+        setChatStatus(state);
+    };
+
     const login = async (email, password) => {
         try {
             await signInWithEmailAndPassword(auth, email, password);
             return { success: true };
         } catch (error) {
-            console.error("Erro no login:", error.code);
             return { success: false, error: "Email ou senha inválidos." };
         }
     };
@@ -58,15 +67,11 @@ export function AuthProvider({ children }) {
     };
     
     const logout = () => {
-        // Garante que o utilizador é marcado como offline ao deslogar.
-        if(auth.currentUser) {
-            const userStatusRef = ref(rtdb, '/status/' + auth.currentUser.uid);
-            set(userStatusRef, { state: 'offline', last_changed: serverTimestamp() });
-        }
+        updateUserChatStatus('offline'); // Garante que o utilizador fica offline ao deslogar
         return signOut(auth);
     };
 
-    const value = { user, loading, login, resetPassword, logout };
+    const value = { user, loading, chatStatus, updateUserChatStatus, login, resetPassword, logout };
 
     return (
         <AuthContext.Provider value={value}>
