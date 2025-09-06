@@ -1,101 +1,127 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { auth, db } from "../firebase";
-import {
-  onAuthStateChanged,
-  signOut,
-  signInWithPopup,
-  GoogleAuthProvider,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+// NOME DO ARQUIVO: contexts/AuthContext.js
+// Versão simplificada focada apenas no login com email/senha e recuperação de senha.
+
+import { createContext, useContext, useState, useEffect } from 'react';
+import { 
+    onAuthStateChanged, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    sendPasswordResetEmail
+} from 'firebase/auth';
+import { auth, db, rtdb, firebaseConfigError } from '../firebase';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { ref, set, onDisconnect } from "firebase/database";
 
 const AuthContext = createContext();
 
 export function useAuth() {
-  return useContext(AuthContext);
+    return useContext(AuthContext);
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [isLogoutLoading, setIsLogoutLoading] = useState(false);
+    const [chatStatus, setChatStatus] = useState('offline');
 
-  // 🔥 Garante que exista /users/{uid}
-  const ensureUserDoc = async (firebaseUser) => {
-    if (!firebaseUser) return;
-
-    const userRef = doc(db, "users", firebaseUser.uid);
-    const userSnap = await getDoc(userRef);
-
-    if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        name: firebaseUser.displayName || "Usuário",
-        role: "member",
-        email: firebaseUser.email,
-        createdAt: new Date()
-      });
-    }
-
-    // Retorna os dados atualizados
-    const freshSnap = await getDoc(userRef);
-    return { uid: firebaseUser.uid, ...freshSnap.data() };
-  };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          const userData = await ensureUserDoc(firebaseUser);
-          setUser(userData);
-        } catch (error) {
-          console.error("Erro ao carregar usuário:", error);
-          setUser(null);
+    useEffect(() => {
+        if (firebaseConfigError) {
+            setLoading(false);
+            return;
         }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
 
-    return unsubscribe;
-  }, []);
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                
+                if (userDoc.exists()) {
+                    setUser({ uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() });
+                    const userStatusRef = ref(rtdb, '/status/' + firebaseUser.uid);
+                    onDisconnect(userStatusRef).set({ state: 'offline', last_changed: serverTimestamp() });
+                } else {
+                    // Se o documento não existir, pode ser um utilizador de um sistema antigo.
+                    // Vamos criar um para ele.
+                    await setDoc(userDocRef, {
+                        name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+                        email: firebaseUser.email,
+                        role: "user",
+                        createdAt: serverTimestamp()
+                    });
+                    const freshSnap = await getDoc(userDocRef);
+                    setUser({ uid: firebaseUser.uid, ...freshSnap.data() });
+                }
+            } else {
+                setUser(null);
+            }
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
 
-  const logout = () => signOut(auth);
+    const updateUserChatStatus = (state) => {
+        if (!user || firebaseConfigError) return;
+        const userStatusRef = ref(rtdb, '/status/' + user.uid);
+        set(userStatusRef, { state, name: user.name, role: user.role, last_changed: serverTimestamp() });
+        setChatStatus(state);
+    };
 
-  const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    return ensureUserDoc(result.user);
-  };
+    const login = async (email, password) => {
+        if (firebaseConfigError) return { success: false, error: "Erro de configuração. Contacte o administrador." };
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: "Email ou senha inválidos." };
+        }
+    };
+    
+    const resetPassword = async (email) => {
+        if (firebaseConfigError) return { success: false, error: "Erro de configuração." };
+        try {
+            await sendPasswordResetEmail(auth, email);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: "Não foi possível enviar o email de recuperação." };
+        }
+    };
+    
+    const logout = async () => {
+        if (!auth.currentUser) return;
+        setIsLogoutLoading(true);
+        try {
+            if (user && user.role !== 'admin') {
+                const messagesQuery = query(collection(db, "chatMessages"), where("uid", "==", user.uid));
+                const querySnapshot = await getDocs(messagesQuery);
+                const batch = writeBatch(db);
+                querySnapshot.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+            }
+            updateUserChatStatus('offline');
+            await signOut(auth);
+        } catch (error) {
+            console.error("Erro durante o logout:", error);
+        } finally {
+            setIsLogoutLoading(false);
+        }
+    };
 
-  const registerWithEmail = async (email, password, name) => {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    await setDoc(doc(db, "users", result.user.uid), {
-      name,
-      role: "member",
-      email,
-      createdAt: new Date()
-    });
-    return ensureUserDoc(result.user);
-  };
+    const value = { 
+        user, 
+        loading, 
+        isLogoutLoading, 
+        firebaseConfigError, 
+        chatStatus, 
+        updateUserChatStatus, 
+        login, 
+        resetPassword, 
+        logout 
+    };
 
-  const loginWithEmail = async (email, password) => {
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    return ensureUserDoc(result.user);
-  };
-
-  const value = {
-    user,
-    loading,
-    logout,
-    loginWithGoogle,
-    registerWithEmail,
-    loginWithEmail
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+    return (
+        <AuthContext.Provider value={value}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
 }
+
