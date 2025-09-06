@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: pages/api/generate.js
-// Serverless Function que a Vercel irá executar.
+// Versão com tratamento de erros melhorado para fornecer mais detalhes ao cliente.
 
 export default async function handler(request, response) {
     if (request.method !== 'POST') {
@@ -13,7 +13,7 @@ export default async function handler(request, response) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        return response.status(500).json({ error: 'A chave da API não está configurada no servidor' });
+        return response.status(500).json({ error: 'A chave da API (GEMINI_API_KEY) não está configurada no servidor. Por favor, adicione-a nas variáveis de ambiente do seu projeto na Vercel.' });
     }
     
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
@@ -28,22 +28,24 @@ export default async function handler(request, response) {
 
         if (!geminiResponse.ok) {
             const errorBody = await geminiResponse.json();
+            const errorMessage = errorBody?.error?.message || 'A API do Gemini retornou um erro desconhecido.';
             console.error('Erro da API do Gemini:', errorBody);
-            throw new Error(errorBody.error.message);
+            // Retorna uma mensagem de erro mais específica para o frontend.
+            return response.status(500).json({ error: `Erro na API de IA: ${errorMessage}` });
         }
 
         const data = await geminiResponse.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!text) {
-             return response.status(500).json({ error: 'Resposta inválida da API do Gemini' });
+             return response.status(500).json({ error: 'Resposta inválida da API do Gemini. O texto gerado está vazio.' });
         }
 
         return response.status(200).json({ text: text });
 
     } catch (error) {
         console.error('Erro interno do servidor:', error);
-        return response.status(500).json({ error: error.message || 'Um erro inesperado aconteceu' });
+        return response.status(500).json({ error: error.message || 'Um erro inesperado aconteceu no servidor.' });
     }
 }
 
