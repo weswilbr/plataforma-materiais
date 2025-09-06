@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: pages/api/generate.js
-// Versão com tratamento de erros melhorado para fornecer mais detalhes ao cliente.
+// Versão com tratamento de erros melhorado e logging para depuração na Vercel.
 
 export default async function handler(request, response) {
     if (request.method !== 'POST') {
@@ -12,6 +12,11 @@ export default async function handler(request, response) {
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
+    
+    // Log para depuração: Verifica se a chave da API foi carregada corretamente.
+    // Pode verificar este log no painel da sua aplicação na Vercel.
+    console.log('GEMINI_API_KEY carregada:', apiKey ? `...${apiKey.slice(-4)}` : 'Não encontrada');
+
     if (!apiKey) {
         return response.status(500).json({ error: 'A chave da API (GEMINI_API_KEY) não está configurada no servidor. Por favor, adicione-a nas variáveis de ambiente do seu projeto na Vercel.' });
     }
