@@ -1,13 +1,14 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão com o novo layout radical, menu de opções, pop-up de utilizadores online e renderizador de Markdown.
+// Versão com tratamento de erros de API melhorado para um diagnóstico mais claro.
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
-import { EmojiPicker, SendIcon, AiIcon, MinimizeIcon, ChatBubbleIcon, EmojiIcon, SoundOnIcon, SoundOffIcon, MoreVerticalIcon } from './chat/ChatUI';
-import ChatMessage from './chat/ChatMessage'; // Corrigido para importar ChatMessage
+import { EmojiPicker } from './chat/ChatUI';
+import ChatMessage from './chat/ChatMessage'; 
+import { SendIcon, AiIcon, MinimizeIcon, ChatBubbleIcon, EmojiIcon, SoundOnIcon, SoundOffIcon, MoreVerticalIcon } from './chat/ChatIcons';
 
 const GlobalChat = ({ isVisible, onClose }) => {
     const { user, chatStatus, updateUserChatStatus } = useAuth();
@@ -72,6 +73,8 @@ const GlobalChat = ({ isVisible, onClose }) => {
                 }
             }
             setMessages(msgs);
+        }, (error) => {
+            console.error("Erro ao buscar mensagens do chat:", error);
         });
 
         const statusRef = ref(rtdb, '/status');
@@ -86,6 +89,8 @@ const GlobalChat = ({ isVisible, onClose }) => {
                 }
             }
             setOnlineUsers(online);
+        }, (error) => {
+             console.error("Erro ao buscar status de utilizadores:", error);
         });
         return () => { unsubscribeMsg(); unsubscribeStatus(); };
     }, [chatStatus, isMinimized, popupsEnabled, user, isMuted]);
@@ -106,16 +111,26 @@ const GlobalChat = ({ isVisible, onClose }) => {
                 const prompt = `Você é um assistente virtual da Equipe de Triunfo, especialista em 4Life e Marketing de Rede. Responda à seguinte pergunta de forma útil e objetiva, mantendo-se estritamente dentro desses tópicos. Pergunta do usuário: "${textToSend}"`;
                 const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), });
                 const data = await response.json();
+                
                 if (!response.ok) {
-                    throw new Error(data.error || 'Erro na API do Gemini');
+                    // Lança um erro com a mensagem específica da API
+                    throw new Error(data.error || `A API retornou um erro ${response.status}`);
                 }
+                
                 await addDoc(collection(db, "chatMessages"), { text: data.text || "Não consegui processar a resposta.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() });
             } else {
                 await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
             }
         } catch (error) {
             console.error("Erro ao interagir com a IA ou enviar mensagem:", error);
-            await addDoc(collection(db, "chatMessages"), { text: `Ocorreu um erro: ${error.message}. Tente novamente.`, uid: 'ai-assistant', name: 'Sistema', role: 'ai', timestamp: serverTimestamp() });
+            // Mostra o erro específico no chat
+            await addDoc(collection(db, "chatMessages"), { 
+                text: `Ocorreu um erro: *${error.message}*. Verifique a consola para mais detalhes.`, 
+                uid: 'ai-assistant', 
+                name: 'Sistema', 
+                role: 'ai', 
+                timestamp: serverTimestamp() 
+            });
         } finally {
             setIsLoading(false);
         }
