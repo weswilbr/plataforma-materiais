@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Versão com o novo Chat flutuante, alternador de tema e placeholder de pesquisa.
+// Versão aprimorada com logout interativo, melhorias de acessibilidade e ajustes na UI.
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -52,6 +52,7 @@ const PlatformLayout = () => {
     const [activeCommand, setActiveCommand] = useState('inicio');
     const [selectedProductId, setSelectedProductId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const { user, logout, chatStatus, updateUserChatStatus } = useAuth();
     const [isChatVisible, setIsChatVisible] = useState(false);
 
@@ -117,6 +118,12 @@ const PlatformLayout = () => {
         setSelectedProductId(null);
         setIsSidebarOpen(false);
     };
+    
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        await logout();
+        // O onAuthStateChanged listener no AuthContext irá tratar do resto.
+    };
 
     const renderContent = () => {
         if (activeCommand === 'produtos') {
@@ -157,13 +164,18 @@ const PlatformLayout = () => {
             
             <aside className={`fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-80 p-6 h-screen overflow-y-auto shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
                 <div>
-                    <div className="flex justify-between items-center mb-2"><h1 className="text-2xl font-bold text-slate-900 dark:text-white">Plataforma de Apoio</h1><button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>
+                    <div className="flex justify-between items-center mb-2">
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Plataforma de Apoio</h1>
+                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white" aria-label="Fechar menu">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Bem-vindo, {user.name}!</p>
                     <nav className="space-y-6">
                         {Object.entries(menuItems).map(([category, commands]) => {
                              if (category === "💰 Produtos & Benefícios") {
                                 return (
-                                    <details key={category} className="group">
+                                    <details key={category} className="group" open>
                                         <summary className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 cursor-pointer list-none flex justify-between items-center">
                                             {category}
                                             <svg className="w-4 h-4 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -177,11 +189,11 @@ const PlatformLayout = () => {
                                                                 {commandMap[command].title}
                                                                 <svg className="w-4 h-4 transform group-open/submenu:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                                             </summary>
-                                                            <ul className="space-y-1 pl-4 mt-2 border-l-2 border-slate-200 dark:border-slate-700">
+                                                            <ul className="space-y-1 pl-4 mt-2 border-l-2 border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto">
                                                                 {materialsMap.individualProducts.map(product => (
                                                                     <li key={product.id}>
                                                                          <button onClick={() => handleProductClick(product.id)} className={`w-full text-left px-4 py-2 rounded-lg transition duration-200 text-sm flex items-center gap-3 ${selectedProductId === product.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'} hover:bg-slate-100 dark:hover:bg-slate-700`}>
-                                                                            <Image src={product.image} alt={product.name} width={24} height={24} className="rounded-full bg-slate-200" />
+                                                                            <Image src={product.image} alt={product.name} width={24} height={24} className="rounded-full bg-slate-200 object-contain" />
                                                                             <span>{product.name}</span>
                                                                         </button>
                                                                     </li>
@@ -214,30 +226,32 @@ const PlatformLayout = () => {
                 </div>
                 <div>
                     <ThemeSwitcher />
-                    <button onClick={logout} className="w-full mt-2 text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50">Sair da Conta</button>
+                    <button onClick={handleLogout} disabled={isLoggingOut} className="w-full mt-2 text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center gap-2 disabled:opacity-70">
+                        {isLoggingOut ? <><div className="loader"></div><span>A Sair...</span></> : <span>Sair da Conta</span>}
+                    </button>
                 </div>
             </aside>
             
             <main className="md:ml-80 h-screen flex flex-col">
                  <header className="md:hidden flex justify-between items-center p-4 sticky top-0 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-700">
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">{activeCommand === 'produtos' && selectedProductId ? materialsMap.productData[selectedProductId].name : commandMap[activeCommand]?.title}</h1>
-                    <button onClick={() => setIsSidebarOpen(true)} className="p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700">
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">{activeCommand === 'produtos' && selectedProductId ? materialsMap.productData[selectedProductId]?.name : commandMap[activeCommand]?.title}</h1>
+                    <button onClick={() => setIsSidebarOpen(true)} className="p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700" aria-label="Abrir menu">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
                  </header>
                  <div className="flex-grow p-6 md:p-10 overflow-y-auto">
-                    {/* Placeholder para a barra de pesquisa */}
-                    <div className="relative mb-6">
-                        <input
-                            type="text"
-                            placeholder="Pesquisar materiais..."
-                            className="w-full p-3 pl-10 bg-slate-100 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white disabled:opacity-50"
-                            disabled // Esta funcionalidade será implementada no futuro
-                        />
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
+                     {/* Placeholder para a barra de pesquisa */}
+                     <div className="relative mb-6">
+                         <input
+                             type="text"
+                             placeholder="Pesquisar materiais (em breve)..."
+                             className="w-full p-3 pl-10 bg-slate-100 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                             disabled // Esta funcionalidade será implementada no futuro
+                         />
+                         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                     </div>
 
-                    {renderContent()}
+                     {renderContent()}
                  </div>
             </main>
 
