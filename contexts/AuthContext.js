@@ -1,16 +1,11 @@
 // NOME DO ARQUIVO: contexts/AuthContext.js
-// Versão simplificada focada apenas no login com email/senha e recuperação de senha.
+// Versão simplificada sem a funcionalidade de apagar o histórico de chat ao sair.
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { 
-    onAuthStateChanged, 
-    signInWithEmailAndPassword, 
-    signOut, 
-    sendPasswordResetEmail
-} from 'firebase/auth';
-import { auth, db, rtdb, firebaseConfigError } from '../firebase';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
-import { ref, set, onDisconnect } from "firebase/database";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { auth, db, rtdb } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { ref, set, serverTimestamp, onDisconnect } from "firebase/database";
 
 const AuthContext = createContext();
 
@@ -21,11 +16,12 @@ export function useAuth() {
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [isLogoutLoading, setIsLogoutLoading] = useState(false);
     const [chatStatus, setChatStatus] = useState('offline');
 
     useEffect(() => {
-        if (firebaseConfigError) {
+        // Validação básica da configuração do Firebase
+        if (!auth.app || !db.app) {
+            console.error("A configuração do Firebase está incompleta. Verifique as suas variáveis de ambiente.");
             setLoading(false);
             return;
         }
@@ -36,20 +32,15 @@ export function AuthProvider({ children }) {
                 const userDoc = await getDoc(userDocRef);
                 
                 if (userDoc.exists()) {
-                    setUser({ uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() });
+                    const userData = { uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() };
+                    setUser(userData);
+                    
                     const userStatusRef = ref(rtdb, '/status/' + firebaseUser.uid);
                     onDisconnect(userStatusRef).set({ state: 'offline', last_changed: serverTimestamp() });
                 } else {
-                    // Se o documento não existir, pode ser um utilizador de um sistema antigo.
-                    // Vamos criar um para ele.
-                    await setDoc(userDocRef, {
-                        name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-                        email: firebaseUser.email,
-                        role: "user",
-                        createdAt: serverTimestamp()
-                    });
-                    const freshSnap = await getDoc(userDocRef);
-                    setUser({ uid: firebaseUser.uid, ...freshSnap.data() });
+                    console.error("Documento do utilizador não encontrado no Firestore. A fazer logout.");
+                    signOut(auth);
+                    setUser(null);
                 }
             } else {
                 setUser(null);
@@ -60,63 +51,47 @@ export function AuthProvider({ children }) {
     }, []);
 
     const updateUserChatStatus = (state) => {
-        if (!user || firebaseConfigError) return;
+        if (!user) return;
         const userStatusRef = ref(rtdb, '/status/' + user.uid);
         set(userStatusRef, { state, name: user.name, role: user.role, last_changed: serverTimestamp() });
         setChatStatus(state);
     };
 
     const login = async (email, password) => {
-        if (firebaseConfigError) return { success: false, error: "Erro de configuração. Contacte o administrador." };
         try {
             await signInWithEmailAndPassword(auth, email, password);
             return { success: true };
         } catch (error) {
-            return { success: false, error: "Email ou senha inválidos." };
+             console.error("Erro de login:", error);
+             if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                return { success: false, error: "Email ou senha inválidos." };
+             }
+             if (error.code === 'auth/network-request-failed'){
+                return { success: false, error: "Erro de rede. Verifique a sua ligação à internet ou a configuração do Firebase." };
+             }
+             return { success: false, error: "Ocorreu um erro ao tentar fazer o login." };
         }
     };
-    
+
     const resetPassword = async (email) => {
-        if (firebaseConfigError) return { success: false, error: "Erro de configuração." };
         try {
             await sendPasswordResetEmail(auth, email);
             return { success: true };
         } catch (error) {
+            console.error("Erro ao redefinir senha:", error);
             return { success: false, error: "Não foi possível enviar o email de recuperação." };
         }
     };
     
-    const logout = async () => {
-        if (!auth.currentUser) return;
-        setIsLogoutLoading(true);
-        try {
-            if (user && user.role !== 'admin') {
-                const messagesQuery = query(collection(db, "chatMessages"), where("uid", "==", user.uid));
-                const querySnapshot = await getDocs(messagesQuery);
-                const batch = writeBatch(db);
-                querySnapshot.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
-            }
+    // A função de logout foi simplificada para apenas desconectar o utilizador.
+    const logout = () => {
+        if (user) {
             updateUserChatStatus('offline');
-            await signOut(auth);
-        } catch (error) {
-            console.error("Erro durante o logout:", error);
-        } finally {
-            setIsLogoutLoading(false);
         }
+        return signOut(auth);
     };
 
-    const value = { 
-        user, 
-        loading, 
-        isLogoutLoading, 
-        firebaseConfigError, 
-        chatStatus, 
-        updateUserChatStatus, 
-        login, 
-        resetPassword, 
-        logout 
-    };
+    const value = { user, loading, chatStatus, updateUserChatStatus, login, resetPassword, logout };
 
     return (
         <AuthContext.Provider value={value}>
