@@ -1,12 +1,13 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão com o novo layout radical, menu de opções e pop-up de utilizadores online.
+// Versão com o novo layout radical, menu de opções, pop-up de utilizadores online e renderizador de Markdown.
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
-import { SendIcon, AiIcon, MinimizeIcon, ChatBubbleIcon, EmojiIcon, EmojiPicker, SoundOnIcon, SoundOffIcon, MoreVerticalIcon } from './chat/ChatUI';
+import { EmojiPicker, SendIcon, AiIcon, MinimizeIcon, ChatBubbleIcon, EmojiIcon, SoundOnIcon, SoundOffIcon, MoreVerticalIcon } from './chat/ChatUI';
+import MessageRenderer from './chat/MessageRenderer'; // Importa o novo componente
 
 const GlobalChat = ({ isVisible, onClose }) => {
     const { user, chatStatus, updateUserChatStatus } = useAuth();
@@ -31,9 +32,11 @@ const GlobalChat = ({ isVisible, onClose }) => {
         script.async = true;
         script.onload = () => {
             const startAudio = () => {
-                window.Tone.start();
-                notificationSound.current = new window.Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 } }).toDestination();
-                document.body.removeEventListener('click', startAudio);
+                if (window.Tone && window.Tone.start) {
+                    window.Tone.start();
+                    notificationSound.current = new window.Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 } }).toDestination();
+                    document.body.removeEventListener('click', startAudio);
+                }
             };
             document.body.addEventListener('click', startAudio);
         };
@@ -45,12 +48,6 @@ const GlobalChat = ({ isVisible, onClose }) => {
     useEffect(() => {
         if (chatStatus === 'offline') return;
         let lastMessageTimestamp = null;
-
-        // SUGESTÃO DE MELHORIA: Implementar Paginação/Scroll Infinito para performance.
-        // Para otimizar, em vez de carregar todas as mensagens, pode-se usar `limit()` para buscar apenas as últimas 50 mensagens.
-        // Exemplo: const q = query(collection(db, "chatMessages"), orderBy("timestamp", "desc"), limit(50));
-        // Depois, para carregar mais mensagens (quando o utilizador rola para cima), pode usar `startAfter()` com a referência da
-        // mensagem mais antiga carregada. Isto exigiria guardar a referência do documento no estado e adicionar um handler para o evento de scroll.
 
         const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
         const unsubscribeMsg = onSnapshot(q, (querySnapshot) => {
@@ -66,7 +63,7 @@ const GlobalChat = ({ isVisible, onClose }) => {
             });
             const lastMessage = msgs[msgs.length - 1];
             if (hasNewMessage && lastMessage && lastMessage.uid !== user.uid) {
-                if (!isMuted && notificationSound.current) {
+                if (!isMuted && notificationSound.current && window.Tone) {
                     notificationSound.current.triggerAttackRelease("G5", "8n", window.Tone.now());
                 }
                 if (isMinimized && popupsEnabled) {
@@ -119,7 +116,7 @@ const GlobalChat = ({ isVisible, onClose }) => {
                         <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
                         <span className="font-bold text-slate-800 dark:text-white">Online ({onlineUsers.length})</span>
                     </div>
-                    <div className="hidden group-hover:block absolute top-full mt-2 w-64 bg-white dark:bg-slate-800 shadow-lg rounded-lg p-2 border dark:border-slate-700">
+                    <div className="hidden group-hover:block absolute top-full mt-2 w-64 bg-white dark:bg-slate-800 shadow-lg rounded-lg p-2 border dark:border-slate-700 z-10">
                         {onlineUsers.map(onlineUser => (
                             <div key={onlineUser.uid} className="flex items-center gap-3 p-2 rounded-md">
                                 {getStatusIndicator(onlineUser.state)}
@@ -142,9 +139,9 @@ const GlobalChat = ({ isVisible, onClose }) => {
             <main className="flex-1 p-4 overflow-y-auto space-y-4">
                 {messages.map(msg => (
                     <div key={msg.id} className={`flex items-end gap-2 ${msg.uid === user.uid ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-3 rounded-2xl max-w-lg ${msg.uid === user.uid ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-indigo-800 rounded-bl-none'}`}>
+                        <div className={`p-3 rounded-2xl max-w-xs md:max-w-sm ${msg.uid === user.uid ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-indigo-800 rounded-bl-none'}`}>
                             <p className={`font-bold text-sm mb-1 ${getRoleColor(msg.role)} ${msg.uid === user.uid ? 'hidden' : 'block'}`}>{msg.name}</p>
-                            <p className="text-base break-words">{msg.text}</p>
+                            <MessageRenderer text={msg.text} />
                         </div>
                     </div>
                 ))}
