@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/chat/ChatUI.js
-// Contém os sub-componentes visuais e ícones utilizados pelo chat.
+// Versão aprimorada com um seletor de emojis mais completo e organizado.
 
 import React from 'react';
 
@@ -14,21 +14,31 @@ export const SoundOffIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width=
 export const MoreVerticalIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>;
 
 // --- Sub-componente para o seletor de emojis ---
+const emojiCategories = {
+    'Smileys & Pessoas': ['😀', '😂', '😊', '😍', '🤔', '👍', '👏', '🙏', '💪'],
+    'Objetos & Símbolos': ['❤️', '🔥', '🚀', '🎉', '💡', '💰', '📈', '🎯', '✅']
+};
+
 export const EmojiPicker = ({ onEmojiSelect }) => {
-    const emojis = ['😀', '😂', '😍', '🤔', '👍', '🙏', '🔥', '🚀', '🎉', '❤️', '👏', '💡'];
     return (
-        <div className="absolute bottom-20 left-4 bg-white dark:bg-slate-700 p-2 rounded-lg shadow-xl border dark:border-slate-600">
-            <div className="grid grid-cols-6 gap-2">
-                {emojis.map(emoji => (
-                    <button 
-                        key={emoji} 
-                        onClick={() => onEmojiSelect(emoji)}
-                        className="text-2xl p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-600 transition"
-                    >
-                        {emoji}
-                    </button>
-                ))}
-            </div>
+        <div className="absolute bottom-20 left-4 bg-white dark:bg-slate-700 p-3 rounded-lg shadow-xl border dark:border-slate-600 w-64">
+            {Object.entries(emojiCategories).map(([category, emojis]) => (
+                <div key={category}>
+                    <h4 className="text-xs font-bold text-slate-400 uppercase mb-2 mt-1 px-1">{category}</h4>
+                    <div className="grid grid-cols-9 gap-1">
+                        {emojis.map(emoji => (
+                            <button 
+                                key={emoji} 
+                                onClick={() => onEmojiSelect(emoji)}
+                                className="text-2xl rounded-md hover:bg-slate-100 dark:hover:bg-slate-600 transition aspect-square flex items-center justify-center"
+                                aria-label={`Inserir emoji: ${emoji}`}
+                            >
+                                {emoji}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 };

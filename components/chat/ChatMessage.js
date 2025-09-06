@@ -1,32 +1,39 @@
 // NOME DO ARQUIVO: components/chat/ChatMessage.js
-// Este novo componente formata o texto das mensagens do chat.
+// Componente para formatar texto, combinando a estrutura do utilizador com as funcionalidades aprimoradas.
 
 import React from 'react';
 
 const ChatMessage = ({ text }) => {
-    // Função para converter texto simples com markdown em HTML
-    const parseMarkdown = (rawText) => {
-        // Proteção básica para evitar a injeção de HTML
+    // Função para converter texto simples com markdown em HTML, agora com mais funcionalidades
+    const parseMarkdown = (rawText = '') => {
+        // 1. Proteção básica para evitar a injeção de HTML
         let formattedText = rawText
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
 
-        // Converte *negrito* para <strong>
-        formattedText = formattedText.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
-        // Converte _itálico_ para <em>
-        formattedText = formattedText.replace(/_(.*?)_/g, '<em>$1</em>');
-        // Converte ~rasurado~ para <s>
-        formattedText = formattedText.replace(/~(.*?)~/g, '<s>$1</s>');
-        // Converte `código` para <code>
-        formattedText = formattedText.replace(/`(.*?)`/g, '<code>$1</code>');
+        // 2. Converte as formatações de markdown
+        formattedText = formattedText.replace(/\*(.*?)\*/g, '<strong>$1</strong>'); // *negrito*
+        formattedText = formattedText.replace(/_(.*?)_/g, '<em>$1</em>'); // _itálico_
+        formattedText = formattedText.replace(/~(.*?)~/g, '<s>$1</s>'); // ~rasurado~
+        formattedText = formattedText.replace(/`(.*?)`/g, '<code class="bg-slate-200 dark:bg-slate-700 px-1 py-0.5 rounded text-sm">$1</code>'); // `código`
+
+        // 3. Converte URLs em links clicáveis
+        const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])|(\bwww\.[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+        formattedText = formattedText.replace(urlRegex, (url) => {
+            const href = url.startsWith('www.') ? `http://${url}` : url;
+            return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">${url}</a>`;
+        });
+        
+        // 4. Converte quebras de linha (\n) em <br> para serem exibidas no HTML
+        formattedText = formattedText.replace(/\n/g, '<br />');
 
         return formattedText;
     };
 
     return (
         <div 
-            className="chat-message text-base break-words"
+            className="prose prose-sm dark:prose-invert max-w-none break-words"
             dangerouslySetInnerHTML={{ __html: parseMarkdown(text) }} 
         />
     );

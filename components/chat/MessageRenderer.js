@@ -1,35 +1,43 @@
 // NOME DO ARQUIVO: components/chat/MessageRenderer.js
-// Renderiza o texto da mensagem, convertendo uma sintaxe simples de Markdown para HTML.
+// Versão aprimorada com deteção automática de links e suporte a quebras de linha.
 
 import React from 'react';
 
 const MessageRenderer = ({ text }) => {
-    const formatText = (inputText) => {
-        // As substituições são aplicadas numa ordem específica para evitar conflitos.
-        let formattedText = inputText
-            // Links: [texto](url)
-            .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">$1</a>')
-            // Negrito: *texto* (não pode conter espaços no início/fim e deve ter conteúdo)
-            .replace(/\*(\S(?:[^*]*\S)?)\*/g, '<strong>$1</strong>')
-            // Itálico: _texto_ (mesma lógica do negrito)
-            .replace(/_(\S(?:[^_]*\S)?)_/g, '<em>$1</em>')
-            // Riscado: ~texto~ (mesma lógica do negrito)
-            .replace(/~(\S(?:[^~]*\S)?)~/g, '<del>$1</del>');
+    // Função para converter texto simples com markdown em HTML, agora com mais funcionalidades
+    const parseMarkdown = (rawText = '') => {
+        // 1. Proteção básica para evitar a injeção de HTML
+        let formattedText = rawText
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // 2. Converte as formatações de markdown
+        formattedText = formattedText.replace(/\*(.*?)\*/g, '<strong>$1</strong>'); // *negrito*
+        formattedText = formattedText.replace(/_(.*?)_/g, '<em>$1</em>'); // _itálico_
+        formattedText = formattedText.replace(/~(.*?)~/g, '<s>$1</s>'); // ~rasurado~
+        formattedText = formattedText.replace(/`(.*?)`/g, '<code class="bg-slate-200 dark:bg-slate-700 px-1 py-0.5 rounded text-sm">$1</code>'); // `código`
+
+        // 3. Converte URLs em links clicáveis
+        const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])|(\bwww\.[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+        formattedText = formattedText.replace(urlRegex, (url) => {
+            const href = url.startsWith('www.') ? `http://${url}` : url;
+            return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">${url}</a>`;
+        });
+        
+        // 4. Converte quebras de linha (\n) em <br> para serem exibidas no HTML
+        formattedText = formattedText.replace(/\n/g, '<br />');
 
         return formattedText;
     };
 
-    const htmlContent = { __html: formatText(text) };
-
-    // Usa as classes 'prose' do plugin @tailwindcss/typography para um estilo agradável
-    // prose-p:my-0 remove margens padrão de parágrafos para mensagens de chat curtas
-    // break-words é importante para que textos longos sem espaços quebrem a linha
     return (
-        <div
-            className="prose prose-sm dark:prose-invert max-w-none prose-p:my-0 break-words"
-            dangerouslySetInnerHTML={htmlContent}
+        <div 
+            className="prose prose-sm dark:prose-invert max-w-none break-words"
+            dangerouslySetInnerHTML={{ __html: parseMarkdown(text) }} 
         />
     );
 };
 
 export default MessageRenderer;
+

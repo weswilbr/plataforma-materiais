@@ -7,7 +7,7 @@ import { db, rtdb } from '../firebase';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
 import { EmojiPicker, SendIcon, AiIcon, MinimizeIcon, ChatBubbleIcon, EmojiIcon, SoundOnIcon, SoundOffIcon, MoreVerticalIcon } from './chat/ChatUI';
-import MessageRenderer from './chat/MessageRenderer'; // Importa o novo componente
+import ChatMessage from './chat/ChatMessage'; // Corrigido para importar ChatMessage
 
 const GlobalChat = ({ isVisible, onClose }) => {
     const { user, chatStatus, updateUserChatStatus } = useAuth();
@@ -46,7 +46,7 @@ const GlobalChat = ({ isVisible, onClose }) => {
 
     // Efeito para buscar mensagens e utilizadores online
     useEffect(() => {
-        if (chatStatus === 'offline') return;
+        if (chatStatus === 'offline' || !user) return;
         let lastMessageTimestamp = null;
 
         const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
@@ -76,7 +76,8 @@ const GlobalChat = ({ isVisible, onClose }) => {
 
         const statusRef = ref(rtdb, '/status');
         const unsubscribeStatus = onValue(statusRef, (snapshot) => {
-            const statuses = snapshot.val(); const online = [];
+            const statuses = snapshot.val(); 
+            const online = [];
             if (statuses) {
                 for (const uid in statuses) {
                     if (statuses[uid].state === 'online' || statuses[uid].state === 'busy') {
@@ -87,12 +88,39 @@ const GlobalChat = ({ isVisible, onClose }) => {
             setOnlineUsers(online);
         });
         return () => { unsubscribeMsg(); unsubscribeStatus(); };
-    }, [chatStatus, isMinimized, popupsEnabled, user.uid, isMuted]);
+    }, [chatStatus, isMinimized, popupsEnabled, user, isMuted]);
 
     // Efeito para rolar para a última mensagem
     useEffect(() => { if (!isMinimized) { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); } }, [messages, isMinimized]);
 
-    const handleSendMessage = async (e) => { e.preventDefault(); if (newMessage.trim() === '') return; setIsLoading(true); const textToSend = newMessage; setNewMessage(''); if (isAiSelected) { try { await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() }); const prompt = `Você é um assistente virtual da Equipe de Triunfo, especialista em 4Life e Marketing de Rede. Responda à seguinte pergunta de forma útil e objetiva, mantendo-se estritamente dentro desses tópicos. Pergunta do usuário: "${textToSend}"`; const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), }); const data = await response.json(); await addDoc(collection(db, "chatMessages"), { text: data.text || "Não consegui processar a resposta.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() }); } catch (error) { console.error("Erro ao interagir com a IA:", error); await addDoc(collection(db, "chatMessages"), { text: "Ocorreu um erro ao conectar com o assistente. Tente novamente.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() }); } } else { await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() }); } setIsLoading(false); };
+    const handleSendMessage = async (e) => { 
+        e.preventDefault(); 
+        if (newMessage.trim() === '') return; 
+        setIsLoading(true); 
+        const textToSend = newMessage; 
+        setNewMessage(''); 
+        
+        try {
+            if (isAiSelected) {
+                await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
+                const prompt = `Você é um assistente virtual da Equipe de Triunfo, especialista em 4Life e Marketing de Rede. Responda à seguinte pergunta de forma útil e objetiva, mantendo-se estritamente dentro desses tópicos. Pergunta do usuário: "${textToSend}"`;
+                const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erro na API do Gemini');
+                }
+                await addDoc(collection(db, "chatMessages"), { text: data.text || "Não consegui processar a resposta.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() });
+            } else {
+                await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
+            }
+        } catch (error) {
+            console.error("Erro ao interagir com a IA ou enviar mensagem:", error);
+            await addDoc(collection(db, "chatMessages"), { text: `Ocorreu um erro: ${error.message}. Tente novamente.`, uid: 'ai-assistant', name: 'Sistema', role: 'ai', timestamp: serverTimestamp() });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
     const handleEmojiSelect = (emoji) => { setNewMessage(prev => prev + emoji); setIsEmojiPickerVisible(false); };
     const getRoleColor = (role) => { switch (role) { case 'admin': return 'text-amber-400'; case 'ai': return 'text-cyan-400'; default: return 'text-slate-500 dark:text-slate-400'; } };
     const getStatusIndicator = (state) => { const color = state === 'online' ? 'bg-green-500' : 'bg-yellow-500'; return (<span className="relative flex h-3 w-3">{state === 'online' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${color} opacity-75`}></span>}<span className={`relative inline-flex rounded-full h-3 w-3 ${color}`}></span></span>); };
@@ -138,10 +166,10 @@ const GlobalChat = ({ isVisible, onClose }) => {
             </header>
             <main className="flex-1 p-4 overflow-y-auto space-y-4">
                 {messages.map(msg => (
-                    <div key={msg.id} className={`flex items-end gap-2 ${msg.uid === user.uid ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-3 rounded-2xl max-w-xs md:max-w-sm ${msg.uid === user.uid ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-indigo-800 rounded-bl-none'}`}>
-                            <p className={`font-bold text-sm mb-1 ${getRoleColor(msg.role)} ${msg.uid === user.uid ? 'hidden' : 'block'}`}>{msg.name}</p>
-                            <MessageRenderer text={msg.text} />
+                    <div key={msg.id} className={`flex items-end gap-2 ${msg.uid === user?.uid ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`p-3 rounded-2xl max-w-xs md:max-w-sm ${msg.uid === user?.uid ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-indigo-800 rounded-bl-none'}`}>
+                            <p className={`font-bold text-sm mb-1 ${getRoleColor(msg.role)} ${msg.uid === user?.uid ? 'hidden' : 'block'}`}>{msg.name}</p>
+                            <ChatMessage text={msg.text} />
                         </div>
                     </div>
                 ))}
