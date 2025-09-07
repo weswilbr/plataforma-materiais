@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import useChatManager from './hooks/useChatManager';
 import ChatHeader from './chat/ChatHeader';
 import ChatBody from './chat/ChatBody';
-import ChatFooter from './chat/Chatfooter';
+import ChatFooter from './chat/ChatFooter';
 import MinimizedChat from './chat/MinimizedChat';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -63,8 +63,14 @@ const GlobalChat = ({ isVisible, onClose }) => {
                 isOptionsMenuVisible={isOptionsMenuVisible}
                 toggleOptionsMenu={() => setIsOptionsMenuVisible(!isOptionsMenuVisible)}
                 isMuted={isMuted}
-                onToggleMute={() => setIsMuted(!isMuted)}
-                onMinimize={() => setIsMinimized(true)}
+                onToggleMute={() => {
+                    setIsMuted(!isMuted);
+                    setIsOptionsMenuVisible(false);
+                }}
+                onMinimize={() => {
+                    setIsMinimized(true);
+                    setIsOptionsMenuVisible(false);
+                }}
                 onCloseChat={handleCloseChat}
                 onlineUsers={onlineUsers}
                 getRoleColor={getRoleColor}
