@@ -1,8 +1,9 @@
 // NOME DO ARQUIVO: components/chat/ChatInput.js
-// Versão com o controlo de som movido para o rodapé.
+// Versão corrigida com a importação de ícones em falta.
 
 import React, { useState } from 'react';
-import { EmojiPicker, SendIcon, AiIcon, SoundOnIcon, SoundOffIcon } from './ChatUI';
+// CORREÇÃO: Adicionada a importação dos ícones a partir do ChatUI.
+import { EmojiPicker, SendIcon, AiIcon, EmojiIcon, SoundOnIcon, SoundOffIcon } from './ChatUI';
 
 const ChatInput = ({
     newMessage,
@@ -19,7 +20,6 @@ const ChatInput = ({
     const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
 
     const handleEmojiSelect = (emoji) => {
-        // Atualiza a mensagem adicionando o emoji selecionado
         const event = { target: { value: newMessage + emoji } };
         onNewMessageChange(event);
         setIsEmojiPickerVisible(false);
