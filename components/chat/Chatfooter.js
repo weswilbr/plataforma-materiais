@@ -6,7 +6,7 @@ import { EmojiPicker } from './ChatUI';
 // CORREÇÃO: Ícones importados de ChatUI, que é o ficheiro correto.
 import { SendIcon, AiIcon, EmojiIcon } from './ChatUI';
 
-const ChatFooter = ({
+const Chatfooter = ({
     newMessage,
     onNewMessageChange,
     onSendMessage,
@@ -63,5 +63,5 @@ const ChatFooter = ({
     );
 };
 
-export default ChatFooter;
+export default Chatfooter;
 
