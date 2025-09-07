@@ -1,10 +1,11 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão atualizada para gerir o estado de maximização e passar as props corretas para os novos componentes de UI.
+// Versão atualizada para que o histórico de mensagens funcione como o WhatsApp,
+// mostrando apenas as mensagens da sessão atual.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, where } from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
 import ChatHeader from './chat/ChatHeader';
 import ChatBody from './chat/ChatBody';
@@ -25,6 +26,7 @@ const GlobalChat = ({ isVisible, onClose }) => {
     const [isMuted, setIsMuted] = useState(false);
     const messagesEndRef = useRef(null);
     const notificationSound = useRef(null);
+    const sessionStartTimeRef = useRef(null); // Ref para guardar o início da sessão
 
     // Efeito para carregar o Tone.js e inicializar o som
     useEffect(() => {
@@ -47,10 +49,27 @@ const GlobalChat = ({ isVisible, onClose }) => {
 
     // Efeito para buscar mensagens e utilizadores online
     useEffect(() => {
-        if (chatStatus === 'offline' || !user) return;
+        // Comportamento de histórico tipo WhatsApp
+        if (chatStatus === 'online' && !sessionStartTimeRef.current) {
+            sessionStartTimeRef.current = new Date();
+        }
+
+        if (chatStatus === 'offline') {
+            sessionStartTimeRef.current = null;
+            setMessages([]); // Limpa as mensagens ao ficar offline
+            return;
+        }
+
+        if (!user) return;
+        
         let lastMessageTimestamp = null;
 
-        const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
+        // A query agora filtra mensagens a partir do início da sessão
+        const q = query(
+            collection(db, "chatMessages"), 
+            where("timestamp", ">=", sessionStartTimeRef.current),
+            orderBy("timestamp", "asc")
+        );
         const unsubscribeMsg = onSnapshot(q, (querySnapshot) => {
             const msgs = [];
             let hasNewMessage = false;
@@ -170,4 +189,3 @@ const GlobalChat = ({ isVisible, onClose }) => {
 };
 
 export default GlobalChat;
-
