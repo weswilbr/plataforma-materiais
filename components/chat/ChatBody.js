@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/chat/ChatBody.js
-// Versão corrigida para garantir que o menu de edição/exclusão apareça corretamente.
+// Versão com o limite de tempo para edição/exclusão removido.
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -55,13 +55,6 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
         setEditingMessage(null);
     };
 
-    const isEditable = (timestamp) => {
-        if (!timestamp) return false;
-        const messageTime = timestamp.toDate().getTime();
-        const now = new Date().getTime();
-        return (now - messageTime) < 15 * 60 * 1000; // 15 minutos
-    };
-
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin': return 'text-amber-400';
@@ -97,7 +90,7 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
 
                 return (
                     <div key={msg.id} className={`flex items-end gap-2 group ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                        {isMyMessage && !msg.isDeleted && isEditable(msg.timestamp) && (
+                        {isMyMessage && !msg.isDeleted && (
                             <div className="relative">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === msg.id ? null : msg.id); }}
