@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import useChatManager from './hooks/useChatManager';
 import ChatHeader from './chat/ChatHeader';
 import ChatBody from './chat/ChatBody';
-import ChatFooter from './chat/ChatFooter';
+import ChatInput from './chat/ChatInput'; // O nome do ficheiro foi atualizado para ChatInput.js
 import MinimizedChat from './chat/MinimizedChat';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -76,7 +76,7 @@ const GlobalChat = ({ isVisible, onClose }) => {
                 getRoleColor={getRoleColor}
             />
             <ChatBody messages={messages} currentUser={user} getRoleColor={getRoleColor} />
-            <ChatFooter
+            <ChatInput
                 newMessage={newMessage}
                 onNewMessageChange={(e) => setNewMessage(e.target.value)}
                 onSendMessage={handleSendMessage}
