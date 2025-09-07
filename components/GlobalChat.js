@@ -1,197 +1,103 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão completa com todas as funcionalidades e correções.
+// Versão final refatorada que utiliza hooks e componentes separados.
 
-import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { db, rtdb } from '../firebase';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
-import { ref, onValue } from "firebase/database";
-import { EmojiPicker } from './chat/ChatUI';
-import ChatMessage from './chat/ChatMessage'; // Atualizado para usar o novo componente de mensagem
-import { SendIcon, AiIcon, MinimizeIcon, ChatBubbleIcon, EmojiIcon, SoundOnIcon, SoundOffIcon, MoreVerticalIcon } from './chat/ChatUI';
-
+import { useState } from 'react';
+import useChatManager from './hooks/useChatManager';
+import ChatHeader from './chat/ChatHeader';
+import ChatBody from './chat/ChatBody';
+import ChatFooter from './chat/ChatFooter';
+import MinimizedChat from './chat/MinimizedChat';
 
 const GlobalChat = ({ isVisible, onClose }) => {
-    const { user, chatStatus, updateUserChatStatus } = useAuth();
-    const [messages, setMessages] = useState([]);
-    const [onlineUsers, setOnlineUsers] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [isAiSelected, setIsAiSelected] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    // Utiliza o hook para gerir toda a lógica e estado do chat
+    const {
+        user,
+        messages,
+        onlineUsers,
+        newMessage,
+        setNewMessage,
+        isAiSelected,
+        setIsAiSelected,
+        isLoading,
+        isMuted,
+        setIsMuted,
+        popupsEnabled,
+        setPopupsEnabled,
+        newNotification,
+        handleSendMessage,
+    } = useChatManager();
+
     const [isMinimized, setIsMinimized] = useState(false);
-    const [newNotification, setNewNotification] = useState(null);
-    const [popupsEnabled, setPopupsEnabled] = useState(true);
-    const [isMuted, setIsMuted] = useState(false);
-    const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
     const [isOptionsMenuVisible, setIsOptionsMenuVisible] = useState(false);
-    const messagesEndRef = useRef(null);
-    const notificationSound = useRef(null);
+    const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
 
-    // Efeito para carregar o Tone.js e inicializar o som
-    useEffect(() => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js';
-        script.async = true;
-        script.onload = () => {
-            const startAudio = () => {
-                if (window.Tone && window.Tone.start) {
-                    window.Tone.start();
-                    notificationSound.current = new window.Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 } }).toDestination();
-                    document.body.removeEventListener('click', startAudio);
-                }
-            };
-            document.body.addEventListener('click', startAudio);
-        };
-        document.body.appendChild(script);
-        return () => { if (script.parentNode) { document.body.removeChild(script); }};
-    }, []);
+    // Funções para controlar a visibilidade do menu e do seletor de emojis
+    const toggleOptionsMenu = () => setIsOptionsMenuVisible(!isOptionsMenuVisible);
+    const toggleEmojiPicker = () => setIsEmojiPickerVisible(!isEmojiPickerVisible);
+    const handleEmojiSelect = (emoji) => {
+        setNewMessage(prev => prev + emoji);
+        setIsEmojiPickerVisible(false);
+    };
 
-    // Efeito para buscar mensagens e utilizadores online
-    useEffect(() => {
-        if (chatStatus === 'offline' || !user) return;
-        let lastMessageTimestamp = null;
-
-        const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
-        const unsubscribeMsg = onSnapshot(q, (querySnapshot) => {
-            const msgs = [];
-            let hasNewMessage = false;
-            querySnapshot.forEach((doc) => {
-                const msgData = { id: doc.id, ...doc.data() };
-                msgs.push(msgData);
-                if (msgData.timestamp && (!lastMessageTimestamp || msgData.timestamp > lastMessageTimestamp)) {
-                    hasNewMessage = true;
-                    lastMessageTimestamp = msgData.timestamp;
-                }
-            });
-            const lastMessage = msgs[msgs.length - 1];
-            if (hasNewMessage && lastMessage && lastMessage.uid !== user.uid) {
-                if (!isMuted && notificationSound.current && window.Tone) {
-                    notificationSound.current.triggerAttackRelease("G5", "8n", window.Tone.now());
-                }
-                if (isMinimized && popupsEnabled) {
-                    setNewNotification(lastMessage);
-                    setTimeout(() => setNewNotification(null), 5000);
-                }
-            }
-            setMessages(msgs);
-        });
-
-        const statusRef = ref(rtdb, '/status');
-        const unsubscribeStatus = onValue(statusRef, (snapshot) => {
-            const statuses = snapshot.val(); 
-            const online = [];
-            if (statuses) {
-                for (const uid in statuses) {
-                    if (statuses[uid].state === 'online' || statuses[uid].state === 'busy') {
-                        online.push({ uid, ...statuses[uid] });
-                    }
-                }
-            }
-            setOnlineUsers(online);
-        });
-        return () => { unsubscribeMsg(); unsubscribeStatus(); };
-    }, [chatStatus, isMinimized, popupsEnabled, user, isMuted]);
-
-    // Efeito para rolar para a última mensagem
-    useEffect(() => { if (!isMinimized) { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); } }, [messages, isMinimized]);
-
-    const handleSendMessage = async (e) => { 
-        e.preventDefault(); 
-        if (newMessage.trim() === '') return; 
-        setIsLoading(true); 
-        const textToSend = newMessage; 
-        setNewMessage(''); 
-        
-        try {
-            if (isAiSelected) {
-                await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
-                const prompt = `Você é um assistente virtual da Equipe de Triunfo, especialista em 4Life e Marketing de Rede. Responda à seguinte pergunta de forma útil e objetiva, mantendo-se estritamente dentro desses tópicos. Pergunta do usuário: "${textToSend}"`;
-                const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || 'Erro na API do Gemini');
-                }
-                await addDoc(collection(db, "chatMessages"), { text: data.text || "Não consegui processar a resposta.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() });
-            } else {
-                await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
-            }
-        } catch (error) {
-            console.error("Erro ao interagir com a IA ou enviar mensagem:", error);
-            await addDoc(collection(db, "chatMessages"), { text: `Ocorreu um erro: ${error.message}. Tente novamente.`, uid: 'ai-assistant', name: 'Sistema', role: 'ai', timestamp: serverTimestamp() });
-        } finally {
-            setIsLoading(false);
+    // Função para obter a cor do papel (role) do utilizador para a estilização
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'admin': return 'text-amber-400';
+            case 'ai': return 'text-cyan-400';
+            default: return 'text-slate-500 dark:text-slate-400';
         }
     };
-    
-    const handleEmojiSelect = (emoji) => { setNewMessage(prev => prev + emoji); setIsEmojiPickerVisible(false); };
-    const getRoleColor = (role) => { switch (role) { case 'admin': return 'text-amber-400'; case 'ai': return 'text-cyan-400'; default: return 'text-slate-500 dark:text-slate-400'; } };
-    const getStatusIndicator = (state) => { const color = state === 'online' ? 'bg-green-500' : 'bg-yellow-500'; return (<span className="relative flex h-3 w-3">{state === 'online' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${color} opacity-75`}></span>}<span className={`relative inline-flex rounded-full h-3 w-3 ${color}`}></span></span>); };
 
-    if (!isVisible) return null;
+    // Se o chat não estiver visível, não renderiza nada
+    if (!isVisible) {
+        return null;
+    }
 
+    // Se estiver minimizado, renderiza o componente minimizado
     if (isMinimized) {
         return (
-            <div className="fixed bottom-4 right-4 z-20">
-                {newNotification && (<div className="absolute bottom-20 right-0 w-72 bg-white dark:bg-slate-700 p-3 rounded-lg shadow-xl animate-fade-in"><p className={`font-bold text-sm ${getRoleColor(newNotification.role)}`}>{newNotification.name}</p><p className="text-sm text-slate-600 dark:text-slate-300 truncate">{newNotification.text}</p></div>)}
-                <button onClick={() => setIsMinimized(false)} className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform" title="Maximizar Chat"><ChatBubbleIcon /></button>
-            </div>
+            <MinimizedChat
+                newNotification={newNotification}
+                onMaximize={() => setIsMinimized(false)}
+                getRoleColor={getRoleColor}
+            />
         );
     }
-    
+
+    // Renderiza o chat completo
     return (
-        <div className={`fixed inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] flex flex-col bg-white dark:bg-indigo-900 md:rounded-lg shadow-2xl z-20 animate-fade-in`}>
-            <header className="p-4 border-b border-slate-200 dark:border-indigo-800 flex justify-between items-center">
-                <div className="group relative">
-                    <div className="flex items-center gap-2 cursor-pointer">
-                        <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
-                        <span className="font-bold text-slate-800 dark:text-white">Online ({onlineUsers.length})</span>
-                    </div>
-                    <div className="hidden group-hover:block absolute top-full mt-2 w-64 bg-white dark:bg-slate-800 shadow-lg rounded-lg p-2 border dark:border-slate-700 z-10">
-                        {onlineUsers.map(onlineUser => (
-                            <div key={onlineUser.uid} className="flex items-center gap-3 p-2 rounded-md">
-                                {getStatusIndicator(onlineUser.state)}
-                                <p className={`font-medium ${getRoleColor(onlineUser.role)}`}>{onlineUser.name}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                <div className="flex items-center gap-2 relative">
-                     <button onClick={() => setIsOptionsMenuVisible(!isOptionsMenuVisible)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition"><MoreVerticalIcon /></button>
-                     {isOptionsMenuVisible && (
-                        <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-800 shadow-lg rounded-lg border dark:border-slate-700 z-30">
-                            <button onClick={() => { setIsMuted(!isMuted); setIsOptionsMenuVisible(false); }} className="w-full text-left px-4 py-2 flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-indigo-800">{isMuted ? <SoundOnIcon/> : <SoundOffIcon/>} {isMuted ? "Ativar Som" : "Mutar Som"}</button>
-                            <button onClick={() => { setIsMinimized(true); setIsOptionsMenuVisible(false); }} className="w-full text-left px-4 py-2 flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-indigo-800"><MinimizeIcon/> Minimizar</button>
-                            <button onClick={() => { updateUserChatStatus('offline'); onClose(); }} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/50">Sair do Chat</button>
-                        </div>
-                     )}
-                </div>
-            </header>
-            <main className="flex-1 p-4 overflow-y-auto space-y-4">
-                {messages.map(msg => (
-                    <div key={msg.id} className={`flex items-end gap-2 ${msg.uid === user?.uid ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-3 rounded-2xl max-w-xs md:max-w-sm ${msg.uid === user?.uid ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-indigo-800 rounded-bl-none'}`}>
-                            <p className={`font-bold text-sm mb-1 ${getRoleColor(msg.role)} ${msg.uid === user?.uid ? 'hidden' : 'block'}`}>{msg.name}</p>
-                            <ChatMessage text={msg.text} />
-                        </div>
-                    </div>
-                ))}
-                <div ref={messagesEndRef} />
-            </main>
-            <footer className="p-4 border-t border-slate-200 dark:border-indigo-800 relative">
-                 {isEmojiPickerVisible && <EmojiPicker onEmojiSelect={handleEmojiSelect} />}
-                 <div className="flex items-center justify-center mb-2">
-                    <label htmlFor="popups-toggle" className="flex items-center cursor-pointer text-xs text-slate-500 dark:text-slate-400">
-                        <input type="checkbox" id="popups-toggle" checked={popupsEnabled} onChange={() => setPopupsEnabled(!popupsEnabled)} className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600"/>
-                        <span className="ml-2">Notificações pop-up</span>
-                    </label>
-                </div>
-                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                    <button type="button" onClick={() => setIsEmojiPickerVisible(!isEmojiPickerVisible)} className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-800 transition flex-shrink-0" title="Inserir Emoji"><EmojiIcon /></button>
-                    <button type="button" onClick={() => setIsAiSelected(!isAiSelected)} className={`p-2 rounded-full transition ${isAiSelected ? 'bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-indigo-800 text-slate-500 dark:text-slate-300'} flex-shrink-0`} title="Falar com a IA"><AiIcon /></button>
-                    <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={isAiSelected ? "Pergunte algo para a IA..." : "Digite sua mensagem..."} className="flex-1 px-4 py-2 bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-full focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" disabled={isLoading} />
-                    <button type="submit" className="p-2.5 font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 transition disabled:bg-slate-400 flex-shrink-0" disabled={isLoading}><SendIcon /></button>
-                </form>
-            </footer>
+        <div className="fixed inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] flex flex-col bg-white dark:bg-indigo-900 md:rounded-lg shadow-2xl z-20 animate-fade-in">
+            <ChatHeader
+                onlineUsersCount={onlineUsers.length}
+                isOptionsMenuVisible={isOptionsMenuVisible}
+                toggleOptionsMenu={toggleOptionsMenu}
+                isMuted={isMuted}
+                onToggleMute={() => setIsMuted(!isMuted)}
+                onMinimize={() => setIsMinimized(true)}
+                onCloseChat={onClose}
+                onlineUsers={onlineUsers}
+                getRoleColor={getRoleColor}
+            />
+
+            <ChatBody
+                messages={messages}
+                currentUser={user}
+                getRoleColor={getRoleColor}
+            />
+
+            <ChatFooter
+                newMessage={newMessage}
+                setNewMessage={setNewMessage}
+                isAiSelected={isAiSelected}
+                isLoading={isLoading}
+                handleSendMessage={handleSendMessage}
+                isEmojiPickerVisible={isEmojiPickerVisible}
+                toggleEmojiPicker={toggleEmojiPicker}
+                handleEmojiSelect={handleEmojiSelect}
+                toggleAiMode={() => setIsAiSelected(!isAiSelected)}
+                popupsEnabled={popupsEnabled}
+                onPopupsToggle={() => setPopupsEnabled(!popupsEnabled)}
+            />
         </div>
     );
 };

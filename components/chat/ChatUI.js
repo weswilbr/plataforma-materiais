@@ -1,9 +1,9 @@
 // NOME DO ARQUIVO: components/chat/ChatUI.js
-// Versão aprimorada com um seletor de emojis mais completo e organizado.
+// Contém os ícones SVG e o sub-componente do seletor de emojis.
 
 import React from 'react';
 
-// --- Ícones SVG ---
+// --- ÍCONES SVG ---
 export const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>;
 export const AiIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>;
 export const MinimizeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>;
@@ -14,24 +14,25 @@ export const SoundOffIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width=
 export const MoreVerticalIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>;
 
 // --- Sub-componente para o seletor de emojis ---
-const emojiCategories = {
-    'Smileys & Pessoas': ['😀', '😂', '😊', '😍', '🤔', '👍', '👏', '🙏', '💪'],
-    'Objetos & Símbolos': ['❤️', '🔥', '🚀', '🎉', '💡', '💰', '📈', '🎯', '✅']
-};
-
 export const EmojiPicker = ({ onEmojiSelect }) => {
+    const categories = {
+        'Smileys & People': ['😀', '😂', '😍', '🤔', '😊', '🥳', '😎', '😇', '👍', '🙏', '👏', '💪'],
+        'Animals & Nature': ['❤️', '🔥', '✨', '⭐', '☀️', '🌸', '🌴', '🌊', '🐶', '🐱', '🦋', '🌍'],
+        'Objects': ['💡', '🚀', '🎉', '🎁', '💎', '💰', '📞', '💻', '📈', '📊', '🔗', '⚙️']
+    };
+
     return (
         <div className="absolute bottom-20 left-4 bg-white dark:bg-slate-700 p-3 rounded-lg shadow-xl border dark:border-slate-600 w-64">
-            {Object.entries(emojiCategories).map(([category, emojis]) => (
+            {Object.entries(categories).map(([category, emojis]) => (
                 <div key={category}>
-                    <h4 className="text-xs font-bold text-slate-400 uppercase mb-2 mt-1 px-1">{category}</h4>
-                    <div className="grid grid-cols-9 gap-1">
+                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 pb-1 mb-2">{category}</h4>
+                    <div className="grid grid-cols-6 gap-2 mb-3">
                         {emojis.map(emoji => (
-                            <button 
-                                key={emoji} 
+                            <button
+                                key={emoji}
                                 onClick={() => onEmojiSelect(emoji)}
-                                className="text-2xl rounded-md hover:bg-slate-100 dark:hover:bg-slate-600 transition aspect-square flex items-center justify-center"
-                                aria-label={`Inserir emoji: ${emoji}`}
+                                className="text-2xl p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-600 transition"
+                                title={`Inserir ${emoji}`}
                             >
                                 {emoji}
                             </button>
