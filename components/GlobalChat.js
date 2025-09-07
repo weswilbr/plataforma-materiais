@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import useChatManager from './hooks/useChatManager';
 import ChatHeader from './chat/ChatHeader';
 import ChatBody from './chat/ChatBody';
-import ChatFooter from './chat/ChatFooter'; // CORRIGIDO: O nome do ficheiro agora está correto (ChatFooter com 'F' maiúsculo)
+import ChatFooter from './chat/ChatFooter';
 import MinimizedChat from './chat/MinimizedChat';
 import { useAuth } from '../contexts/AuthContext';
 
