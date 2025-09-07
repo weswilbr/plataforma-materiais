@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão com tratamento de erros de API melhorado para um diagnóstico mais claro.
+// Versão completa com todas as funcionalidades e correções.
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,8 +7,9 @@ import { db, rtdb } from '../firebase';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
 import { EmojiPicker } from './chat/ChatUI';
-import ChatMessage from './chat/ChatMessage'; 
-import { SendIcon, AiIcon, MinimizeIcon, ChatBubbleIcon, EmojiIcon, SoundOnIcon, SoundOffIcon, MoreVerticalIcon } from './chat/ChatIcons';
+import ChatMessage from './chat/ChatMessage'; // Atualizado para usar o novo componente de mensagem
+import { SendIcon, AiIcon, MinimizeIcon, ChatBubbleIcon, EmojiIcon, SoundOnIcon, SoundOffIcon, MoreVerticalIcon } from './chat/ChatUI';
+
 
 const GlobalChat = ({ isVisible, onClose }) => {
     const { user, chatStatus, updateUserChatStatus } = useAuth();
@@ -73,8 +74,6 @@ const GlobalChat = ({ isVisible, onClose }) => {
                 }
             }
             setMessages(msgs);
-        }, (error) => {
-            console.error("Erro ao buscar mensagens do chat:", error);
         });
 
         const statusRef = ref(rtdb, '/status');
@@ -89,8 +88,6 @@ const GlobalChat = ({ isVisible, onClose }) => {
                 }
             }
             setOnlineUsers(online);
-        }, (error) => {
-             console.error("Erro ao buscar status de utilizadores:", error);
         });
         return () => { unsubscribeMsg(); unsubscribeStatus(); };
     }, [chatStatus, isMinimized, popupsEnabled, user, isMuted]);
@@ -111,26 +108,16 @@ const GlobalChat = ({ isVisible, onClose }) => {
                 const prompt = `Você é um assistente virtual da Equipe de Triunfo, especialista em 4Life e Marketing de Rede. Responda à seguinte pergunta de forma útil e objetiva, mantendo-se estritamente dentro desses tópicos. Pergunta do usuário: "${textToSend}"`;
                 const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), });
                 const data = await response.json();
-                
                 if (!response.ok) {
-                    // Lança um erro com a mensagem específica da API
-                    throw new Error(data.error || `A API retornou um erro ${response.status}`);
+                    throw new Error(data.error || 'Erro na API do Gemini');
                 }
-                
                 await addDoc(collection(db, "chatMessages"), { text: data.text || "Não consegui processar a resposta.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() });
             } else {
                 await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
             }
         } catch (error) {
             console.error("Erro ao interagir com a IA ou enviar mensagem:", error);
-            // Mostra o erro específico no chat
-            await addDoc(collection(db, "chatMessages"), { 
-                text: `Ocorreu um erro: *${error.message}*. Verifique a consola para mais detalhes.`, 
-                uid: 'ai-assistant', 
-                name: 'Sistema', 
-                role: 'ai', 
-                timestamp: serverTimestamp() 
-            });
+            await addDoc(collection(db, "chatMessages"), { text: `Ocorreu um erro: ${error.message}. Tente novamente.`, uid: 'ai-assistant', name: 'Sistema', role: 'ai', timestamp: serverTimestamp() });
         } finally {
             setIsLoading(false);
         }
@@ -198,11 +185,11 @@ const GlobalChat = ({ isVisible, onClose }) => {
                         <span className="ml-2">Notificações pop-up</span>
                     </label>
                 </div>
-                <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-                    <button type="button" onClick={() => setIsEmojiPickerVisible(!isEmojiPickerVisible)} className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-800 transition" title="Inserir Emoji"><EmojiIcon /></button>
-                    <button type="button" onClick={() => setIsAiSelected(!isAiSelected)} className={`p-2 rounded-full transition ${isAiSelected ? 'bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-indigo-800 text-slate-500 dark:text-slate-300'}`} title="Falar com a IA"><AiIcon /></button>
+                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                    <button type="button" onClick={() => setIsEmojiPickerVisible(!isEmojiPickerVisible)} className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-800 transition flex-shrink-0" title="Inserir Emoji"><EmojiIcon /></button>
+                    <button type="button" onClick={() => setIsAiSelected(!isAiSelected)} className={`p-2 rounded-full transition ${isAiSelected ? 'bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-indigo-800 text-slate-500 dark:text-slate-300'} flex-shrink-0`} title="Falar com a IA"><AiIcon /></button>
                     <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={isAiSelected ? "Pergunte algo para a IA..." : "Digite sua mensagem..."} className="flex-1 px-4 py-2 bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-full focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" disabled={isLoading} />
-                    <button type="submit" className="p-2.5 font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 transition disabled:bg-slate-400" disabled={isLoading}><SendIcon /></button>
+                    <button type="submit" className="p-2.5 font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 transition disabled:bg-slate-400 flex-shrink-0" disabled={isLoading}><SendIcon /></button>
                 </form>
             </footer>
         </div>
