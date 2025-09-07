@@ -1,9 +1,10 @@
 // NOME DO ARQUIVO: components/chat/ChatFooter.js
-// Componente refatorado para o rodapé do chat, com a lógica de envio de mensagens.
+// Componente refatorado para o rodapé do chat, com importações corrigidas.
 
 import React, { useState } from 'react';
-import { EmojiPicker } from './ChatUI';
-import { SendIcon, AiIcon, EmojiIcon } from './ChatIcons';
+import { EmojiPicker } from './ChatUi';
+// CORREÇÃO: Ícones importados de ChatUI, que é o ficheiro correto.
+import { SendIcon, AiIcon, EmojiIcon } from './ChatUi';
 
 const ChatFooter = ({
     newMessage,
@@ -18,7 +19,6 @@ const ChatFooter = ({
     const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
 
     const handleEmojiSelect = (emoji) => {
-        // Esta função precisa ser definida para que o seletor funcione
         onNewMessageChange({ target: { value: newMessage + emoji } });
         setIsEmojiPickerVisible(false);
     };

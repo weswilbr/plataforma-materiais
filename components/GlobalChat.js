@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import useChatManager from './hooks/useChatManager';
 import ChatHeader from './chat/ChatHeader';
 import ChatBody from './chat/ChatBody';
-import ChatFooter from './chat/ChatFooter';
+import ChatFooter from './chat/Chatfooter';
 import MinimizedChat from './chat/MinimizedChat';
 import { useAuth } from '../contexts/AuthContext';
 

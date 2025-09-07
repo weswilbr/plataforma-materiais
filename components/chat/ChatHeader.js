@@ -2,7 +2,8 @@
 // Componente refatorado para o cabeçalho do chat, com importações corrigidas.
 
 import React from 'react';
-import { MoreVerticalIcon, SoundOnIcon, SoundOffIcon, MinimizeIcon } from './ChatUI'; // Caminho corrigido
+// CORREÇÃO: Ícones importados de ChatUI, que é o ficheiro correto.
+import { SoundOnIcon, SoundOffIcon, MoreVerticalIcon, MinimizeIcon } from './ChatUi';
 
 const ChatHeader = ({
     onlineUsersCount,
@@ -15,7 +16,7 @@ const ChatHeader = ({
     onlineUsers,
     getRoleColor,
 }) => {
-    // Função para obter o indicador de estado visual (online/ocupado)
+
     const getStatusIndicator = (state) => {
         const color = state === 'online' ? 'bg-green-500' : 'bg-yellow-500';
         return (
@@ -25,7 +26,7 @@ const ChatHeader = ({
             </span>
         );
     };
-    
+
     return (
         <header className="p-4 border-b border-slate-200 dark:border-indigo-800 flex justify-between items-center flex-shrink-0">
             <div className="group relative">
@@ -51,11 +52,11 @@ const ChatHeader = ({
                 </button>
                 {isOptionsMenuVisible && (
                     <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-800 shadow-lg rounded-lg border dark:border-slate-700 z-30">
-                        <button onClick={() => { onToggleMute(); toggleOptionsMenu(); }} className="w-full text-left px-4 py-2 flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-indigo-800">
-                            {isMuted ? <SoundOnIcon /> : <SoundOffIcon />} {isMuted ? "Ativar Som" : "Mutar Som"}
+                        <button onClick={onToggleMute} className="w-full text-left px-4 py-2 flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-indigo-800">
+                            {isMuted ? <SoundOnIcon/> : <SoundOffIcon/>} {isMuted ? "Ativar Som" : "Mutar Som"}
                         </button>
-                        <button onClick={() => { onMinimize(); toggleOptionsMenu(); }} className="w-full text-left px-4 py-2 flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-indigo-800">
-                            <MinimizeIcon /> Minimizar
+                        <button onClick={onMinimize} className="w-full text-left px-4 py-2 flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-indigo-800">
+                            <MinimizeIcon/> Minimizar
                         </button>
                         <button onClick={onCloseChat} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/50">
                             Sair do Chat

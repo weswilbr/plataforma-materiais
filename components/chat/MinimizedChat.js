@@ -2,7 +2,8 @@
 // Componente refatorado para o chat minimizado, com importações corrigidas.
 
 import React from 'react';
-import { ChatBubbleIcon } from './ChatUI'; // Caminho corrigido
+// CORREÇÃO: Ícones importados de ChatUI, que é o ficheiro correto.
+import { ChatBubbleIcon } from './ChatUi';
 
 const MinimizedChat = ({ newNotification, onMaximize, getRoleColor }) => {
     return (
