@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/chat/ChatBody.js
-// Componente refatorado para incluir nome, timestamp, e opções de editar/apagar.
+// Versão corrigida para garantir que o menu de edição/exclusão apareça corretamente.
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -84,6 +84,7 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
                                     onChange={(e) => setEditingMessage({ ...editingMessage, text: e.target.value })}
                                     className="w-full p-2 bg-slate-50 dark:bg-indigo-800 rounded-md text-slate-900 dark:text-white"
                                     rows="3"
+                                    autoFocus
                                 />
                                 <div className="flex justify-end gap-2 mt-2">
                                     <button type="button" onClick={handleCancelEdit} className="px-3 py-1 text-sm rounded-md bg-slate-300 dark:bg-slate-700">Cancelar</button>
@@ -96,7 +97,7 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
 
                 return (
                     <div key={msg.id} className={`flex items-end gap-2 group ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                        {isMyMessage && (
+                        {isMyMessage && !msg.isDeleted && isEditable(msg.timestamp) && (
                             <div className="relative">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === msg.id ? null : msg.id); }}
@@ -135,3 +136,4 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
 };
 
 export default ChatBody;
+
