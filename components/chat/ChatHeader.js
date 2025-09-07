@@ -1,3 +1,4 @@
+// ok
 // NOME DO ARQUIVO: components/chat/ChatHeader.js
 // Componente refatorado para o cabeçalho do chat, com importações corrigidas.
 
