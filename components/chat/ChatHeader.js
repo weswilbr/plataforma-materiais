@@ -2,8 +2,8 @@
 // Componente refatorado para o cabeçalho do chat, com importações corrigidas.
 
 import React from 'react';
-// CORREÇÃO: Ícones importados de ChatUI, que é o ficheiro correto.
-import { SoundOnIcon, SoundOffIcon, MoreVerticalIcon, MinimizeIcon } from './ChatUi';
+// Ícones importados de ChatUI, que é o ficheiro correto.
+import { SoundOnIcon, SoundOffIcon, MoreVerticalIcon, MinimizeIcon } from './ChatUI';
 
 const ChatHeader = ({
     onlineUsersCount,
@@ -47,7 +47,7 @@ const ChatHeader = ({
                 </div>
             </div>
             <div className="flex items-center gap-2 relative">
-                <button onClick={toggleOptionsMenu} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition">
+                <button onClick={toggleOptionsMenu} className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700 rounded-full transition" aria-label="Abrir menu de opções">
                     <MoreVerticalIcon />
                 </button>
                 {isOptionsMenuVisible && (

@@ -3,7 +3,7 @@
 
 import React from 'react';
 // CORREÇÃO: Ícones importados de ChatUI, que é o ficheiro correto.
-import { ChatBubbleIcon } from './ChatUi';
+import { ChatBubbleIcon } from './ChatUI';
 
 const MinimizedChat = ({ newNotification, onMaximize, getRoleColor }) => {
     return (

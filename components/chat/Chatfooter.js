@@ -2,9 +2,9 @@
 // Componente refatorado para o rodapé do chat, com importações corrigidas.
 
 import React, { useState } from 'react';
-import { EmojiPicker } from './ChatUi';
+import { EmojiPicker } from './ChatUI';
 // CORREÇÃO: Ícones importados de ChatUI, que é o ficheiro correto.
-import { SendIcon, AiIcon, EmojiIcon } from './ChatUi';
+import { SendIcon, AiIcon, EmojiIcon } from './ChatUI';
 
 const ChatFooter = ({
     newMessage,
