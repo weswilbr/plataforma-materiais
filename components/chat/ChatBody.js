@@ -23,6 +23,7 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
     const messagesEndRef = useRef(null);
     const [activeMenu, setActiveMenu] = useState(null);
     const [editingMessage, setEditingMessage] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -47,12 +48,28 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
 
     const handleCancelEdit = () => setEditingMessage(null);
 
-    const handleSaveEdit = (e) => {
+    const handleSaveEdit = async (e) => {
         e.preventDefault();
-        if (editingMessage && editingMessage.text.trim()) {
-            onUpdateMessage(editingMessage.id, editingMessage.text);
+        if (isSaving || !editingMessage || !editingMessage.text.trim()) return;
+        
+        setIsSaving(true);
+        try {
+            await onUpdateMessage(editingMessage.id, editingMessage.text);
+        } catch (error) {
+            console.error("Falha ao salvar a mensagem:", error);
+        } finally {
+            setEditingMessage(null);
+            setIsSaving(false);
         }
-        setEditingMessage(null);
+    };
+
+    const handleDelete = async (messageId) => {
+        setActiveMenu(null);
+        try {
+            await onDeleteMessage(messageId);
+        } catch (error) {
+            console.error("Falha ao apagar a mensagem:", error);
+        }
     };
 
     const getRoleColor = (role) => {
@@ -78,10 +95,13 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
                                     className="w-full p-2 bg-slate-50 dark:bg-indigo-800 rounded-md text-slate-900 dark:text-white"
                                     rows="3"
                                     autoFocus
+                                    disabled={isSaving}
                                 />
                                 <div className="flex justify-end gap-2 mt-2">
-                                    <button type="button" onClick={handleCancelEdit} className="px-3 py-1 text-sm rounded-md bg-slate-300 dark:bg-slate-700">Cancelar</button>
-                                    <button type="submit" className="px-3 py-1 text-sm rounded-md bg-blue-600 text-white">Salvar</button>
+                                    <button type="button" onClick={handleCancelEdit} className="px-3 py-1 text-sm rounded-md bg-slate-300 dark:bg-slate-700 disabled:opacity-50" disabled={isSaving}>Cancelar</button>
+                                    <button type="submit" className="px-3 py-1 text-sm rounded-md bg-blue-600 text-white disabled:bg-blue-400" disabled={isSaving}>
+                                        {isSaving ? 'A salvar...' : 'Salvar'}
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -101,7 +121,7 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
                                 {activeMenu === msg.id && (
                                     <MessageMenu
                                         onEdit={() => handleStartEdit(msg)}
-                                        onDelete={() => onDeleteMessage(msg.id)}
+                                        onDelete={() => handleDelete(msg.id)}
                                     />
                                 )}
                             </div>
