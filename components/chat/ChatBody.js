@@ -1,191 +1,152 @@
-// NOME DO ARQUIVO: components/GlobalChat.js
-// Versão corrigida passando as funções de update e delete para o ChatBody.
+// NOME DO ARQUIVO: components/chat/ChatBody.js
+// Versão com o limite de tempo para edição/exclusão removido.
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { db, rtdb } from '../firebase';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { ref, onValue } from "firebase/database";
-import ChatHeader from './chat/ChatHeader';
-import ChatBody from './chat/ChatBody';
-import ChatInput from './chat/ChatInput';
-import MinimizedChat from './chat/MinimizedChat';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import ChatMessage from './ChatMessage';
+import { MoreOptionsIcon, EditIcon, DeleteIcon } from './ChatUI';
 
-const GlobalChat = ({ isVisible, onClose }) => {
-    const { user, chatStatus, updateUserChatStatus } = useAuth();
-    const [messages, setMessages] = useState([]);
-    const [onlineUsers, setOnlineUsers] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [isAiSelected, setIsAiSelected] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isMinimized, setIsMinimized] = useState(false);
-    const [chatSize, setChatSize] = useState('normal'); // 'normal' ou 'maximized'
-    const [newNotification, setNewNotification] = useState(null);
-    const [popupsEnabled, setPopupsEnabled] = useState(true);
-    const [isMuted, setIsMuted] = useState(false);
-    const notificationSound = useRef(null);
-    
-    // Efeito para carregar o Tone.js e inicializar o som
+const MessageMenu = ({ onEdit, onDelete }) => (
+    <div className="absolute top-0 right-full mr-2 bg-white dark:bg-slate-700 shadow-lg rounded-md p-1 z-10">
+        <button onClick={onEdit} className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-md">
+            <EditIcon /> Editar
+        </button>
+        <button onClick={onDelete} className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-md">
+            <DeleteIcon /> Apagar
+        </button>
+    </div>
+);
+
+
+const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
+    const { user } = useAuth();
+    const messagesEndRef = useRef(null);
+    const [activeMenu, setActiveMenu] = useState(null);
+    const [editingMessage, setEditingMessage] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+
     useEffect(() => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js';
-        script.async = true;
-        script.onload = () => {
-            const startAudio = () => {
-                if (window.Tone && window.Tone.start) {
-                    window.Tone.start();
-                    notificationSound.current = new window.Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 } }).toDestination();
-                    document.body.removeEventListener('click', startAudio);
-                }
-            };
-            document.body.addEventListener('click', startAudio);
-        };
-        document.body.appendChild(script);
-        return () => { if (script.parentNode) { document.body.removeChild(script); }};
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    useEffect(() => {
+        const handleClickOutside = () => setActiveMenu(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
-    // Efeito para buscar mensagens e utilizadores online
-    useEffect(() => {
-        if (chatStatus === 'offline' || !user) {
-            setMessages([]); // Limpa as mensagens se o chat estiver offline ou não houver usuário
-            return;
-        }
+    const formatTimestamp = (timestamp) => {
+        if (!timestamp) return '';
+        const date = timestamp.toDate();
+        return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    };
 
-        const q = query(collection(db, "chatMessages"), orderBy("timestamp", "asc"));
-        const unsubscribeMsg = onSnapshot(q, (querySnapshot) => {
-            const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            const lastMessage = msgs[msgs.length - 1];
-            if (lastMessage && lastMessage.uid !== user.uid) {
-                if (!isMuted && notificationSound.current && window.Tone && lastMessage.timestamp) {
-                     const messageTime = lastMessage.timestamp.toDate().getTime();
-                     const now = new Date().getTime();
-                     // Só toca o som para mensagens recentes (últimos 10 segundos)
-                     if ((now - messageTime) < 10000) {
-                        notificationSound.current.triggerAttackRelease("G5", "8n", window.Tone.now());
-                     }
-                }
-                if (isMinimized && popupsEnabled) {
-                    setNewNotification(lastMessage);
-                    setTimeout(() => setNewNotification(null), 5000);
-                }
-            }
-            setMessages(msgs);
-        });
+    const handleStartEdit = (msg) => {
+        setEditingMessage({ id: msg.id, text: msg.text });
+        setActiveMenu(null);
+    };
 
-        const statusRef = ref(rtdb, '/status');
-        const unsubscribeStatus = onValue(statusRef, (snapshot) => {
-            const statuses = snapshot.val() || {};
-            const online = Object.keys(statuses)
-                .filter(uid => statuses[uid].state === 'online' || statuses[uid].state === 'busy')
-                .map(uid => ({ uid, ...statuses[uid] }));
-            setOnlineUsers(online);
-        });
+    const handleCancelEdit = () => setEditingMessage(null);
 
-        return () => { unsubscribeMsg(); unsubscribeStatus(); };
-    }, [chatStatus, user, isMinimized, popupsEnabled, isMuted]);
-
-    const handleSendMessage = async (e) => { 
-        e.preventDefault(); 
-        if (newMessage.trim() === '' || !user) return; 
-        setIsLoading(true); 
-        const textToSend = newMessage; 
-        setNewMessage(''); 
+    const handleSaveEdit = async (e) => {
+        e.preventDefault();
+        if (isSaving || !editingMessage || !editingMessage.text.trim()) return;
         
+        setIsSaving(true);
         try {
-            await addDoc(collection(db, "chatMessages"), { 
-                text: textToSend, 
-                uid: user.uid, 
-                name: user.name, 
-                role: user.role, 
-                timestamp: serverTimestamp(),
-                isDeleted: false,
-                editedAt: null,
-            });
-
-            if (isAiSelected) {
-                const prompt = `Você é um assistente virtual da Equipe de Triunfo, especialista em 4Life e Marketing de Rede. Responda à seguinte pergunta de forma útil e objetiva, mantendo-se estritamente dentro desses tópicos. Pergunta do usuário: "${textToSend}"`;
-                const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || 'Erro na API do Gemini');
-                }
-                await addDoc(collection(db, "chatMessages"), { text: data.text || "Não consegui processar a resposta.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() });
-            }
+            await onUpdateMessage(editingMessage.id, editingMessage.text);
         } catch (error) {
-            console.error("Erro ao interagir com a IA ou enviar mensagem:", error);
-            await addDoc(collection(db, "chatMessages"), { text: `Ocorreu um erro: ${error.message}. Tente novamente.`, uid: 'ai-assistant', name: 'Sistema', role: 'ai', timestamp: serverTimestamp() });
+            console.error("Falha ao salvar a mensagem:", error);
         } finally {
-            setIsLoading(false);
+            setEditingMessage(null);
+            setIsSaving(false);
         }
     };
 
-    const handleUpdateMessage = async (messageId, newText) => {
-        const messageRef = doc(db, "chatMessages", messageId);
-        await updateDoc(messageRef, {
-            text: newText,
-            editedAt: serverTimestamp()
-        });
+    const handleDelete = async (messageId) => {
+        setActiveMenu(null);
+        try {
+            await onDeleteMessage(messageId);
+        } catch (error) {
+            console.error("Falha ao apagar a mensagem:", error);
+        }
     };
 
-    const handleDeleteMessage = async (messageId) => {
-        const messageRef = doc(db, "chatMessages", messageId);
-        await updateDoc(messageRef, {
-            text: "Esta mensagem foi apagada.",
-            isDeleted: true
-        });
-    };
-    
-    const getRoleColor = (role) => { switch (role) { case 'admin': return 'text-amber-400'; case 'ai': return 'text-cyan-400'; default: return 'text-slate-500 dark:text-slate-400'; } };
-    
-    const handleCloseChat = () => {
-        updateUserChatStatus('offline');
-        onClose();
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'admin': return 'text-amber-400';
+            case 'ai': return 'text-cyan-400';
+            default: return 'text-slate-500 dark:text-slate-400';
+        }
     };
 
-    if (!isVisible) return null;
-
-    if (isMinimized) {
-        return (
-            <MinimizedChat
-                newNotification={newNotification}
-                onMaximize={() => setIsMinimized(false)}
-                getRoleColor={getRoleColor}
-            />
-        );
-    }
-    
     return (
-        <div className={`fixed inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-96 ${chatSize === 'normal' ? 'md:h-[600px]' : 'md:h-[90vh]'} flex flex-col bg-white dark:bg-indigo-900 md:rounded-lg shadow-2xl z-20 animate-fade-in`}>
-            <ChatHeader
-                onlineUsers={onlineUsers}
-                getRoleColor={getRoleColor}
-                onMinimize={() => setIsMinimized(true)}
-                onMaximize={() => setChatSize('maximized')}
-                onRestore={() => setChatSize('normal')}
-                onCloseChat={handleCloseChat}
-                chatSize={chatSize}
-            />
-            <ChatBody 
-                messages={messages} 
-                onUpdateMessage={handleUpdateMessage}
-                onDeleteMessage={handleDeleteMessage}
-            />
-            <ChatInput
-                newMessage={newMessage}
-                onNewMessageChange={(e) => setNewMessage(e.target.value)}
-                onSendMessage={handleSendMessage}
-                isAiSelected={isAiSelected}
-                onAiToggle={() => setIsAiSelected(!isAiSelected)}
-                isLoading={isLoading}
-                popupsEnabled={popupsEnabled}
-                onPopupsToggle={() => setPopupsEnabled(!popupsEnabled)}
-                isMuted={isMuted}
-                onToggleMute={() => setIsMuted(!isMuted)}
-            />
-        </div>
+        <main className="flex-1 p-4 overflow-y-auto space-y-4">
+            {messages.map(msg => {
+                const isMyMessage = msg.uid === user?.uid;
+                
+                if (editingMessage && editingMessage.id === msg.id) {
+                    return (
+                        <div key={msg.id} className="flex justify-end">
+                             <form onSubmit={handleSaveEdit} className="w-full max-w-sm p-2 bg-slate-200 dark:bg-indigo-950 rounded-lg">
+                                <textarea
+                                    value={editingMessage.text}
+                                    onChange={(e) => setEditingMessage({ ...editingMessage, text: e.target.value })}
+                                    className="w-full p-2 bg-slate-50 dark:bg-indigo-800 rounded-md text-slate-900 dark:text-white"
+                                    rows="3"
+                                    autoFocus
+                                    disabled={isSaving}
+                                />
+                                <div className="flex justify-end gap-2 mt-2">
+                                    <button type="button" onClick={handleCancelEdit} className="px-3 py-1 text-sm rounded-md bg-slate-300 dark:bg-slate-700 disabled:opacity-50" disabled={isSaving}>Cancelar</button>
+                                    <button type="submit" className="px-3 py-1 text-sm rounded-md bg-blue-600 text-white disabled:bg-blue-400" disabled={isSaving}>
+                                        {isSaving ? 'A salvar...' : 'Salvar'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div key={msg.id} className={`flex items-end gap-2 group ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                        {isMyMessage && !msg.isDeleted && (
+                            <div className="relative">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === msg.id ? null : msg.id); }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700"
+                                >
+                                    <MoreOptionsIcon />
+                                </button>
+                                {activeMenu === msg.id && (
+                                    <MessageMenu
+                                        onEdit={() => handleStartEdit(msg)}
+                                        onDelete={() => handleDelete(msg.id)}
+                                    />
+                                )}
+                            </div>
+                        )}
+                        <div className={`p-3 rounded-2xl max-w-xs md:max-w-sm ${isMyMessage ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-indigo-800 rounded-bl-none'}`}>
+                            {!isMyMessage && msg.role !== 'ai' && (
+                                <p className={`font-bold text-sm mb-1 ${getRoleColor(msg.role)}`}>{msg.name}</p>
+                            )}
+                             {msg.isDeleted ? (
+                                <p className="italic text-sm text-slate-400 dark:text-slate-500">{msg.text}</p>
+                            ) : (
+                                <ChatMessage text={msg.text} />
+                            )}
+                            <div className="text-right text-xs mt-1.5 opacity-70">
+                                {msg.editedAt && <span>(editado) </span>}
+                                {formatTimestamp(msg.timestamp)}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+            <div ref={messagesEndRef} />
+        </main>
     );
 };
 
-export default GlobalChat;
+export default ChatBody;
 

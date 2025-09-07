@@ -1,11 +1,10 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão atualizada para que o histórico de mensagens funcione como o WhatsApp,
-// mostrando apenas as mensagens da sessão atual.
+// Versão com importação do Firestore corrigida para resolver o erro de 'updateDoc'.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, rtdb } from '../firebase';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, where } from 'firebase/firestore';
+import * as firestore from 'firebase/firestore';
 import { ref, onValue } from "firebase/database";
 import ChatHeader from './chat/ChatHeader';
 import ChatBody from './chat/ChatBody';
@@ -24,10 +23,8 @@ const GlobalChat = ({ isVisible, onClose }) => {
     const [newNotification, setNewNotification] = useState(null);
     const [popupsEnabled, setPopupsEnabled] = useState(true);
     const [isMuted, setIsMuted] = useState(false);
-    const messagesEndRef = useRef(null);
     const notificationSound = useRef(null);
-    const sessionStartTimeRef = useRef(null); // Ref para guardar o início da sessão
-
+    
     // Efeito para carregar o Tone.js e inicializar o som
     useEffect(() => {
         const script = document.createElement('script');
@@ -49,42 +46,24 @@ const GlobalChat = ({ isVisible, onClose }) => {
 
     // Efeito para buscar mensagens e utilizadores online
     useEffect(() => {
-        // Comportamento de histórico tipo WhatsApp
-        if (chatStatus === 'online' && !sessionStartTimeRef.current) {
-            sessionStartTimeRef.current = new Date();
-        }
-
-        if (chatStatus === 'offline') {
-            sessionStartTimeRef.current = null;
-            setMessages([]); // Limpa as mensagens ao ficar offline
+        if (chatStatus === 'offline' || !user) {
+            setMessages([]); // Limpa as mensagens se o chat estiver offline ou não houver usuário
             return;
         }
 
-        if (!user) return;
-        
-        let lastMessageTimestamp = null;
-
-        // A query agora filtra mensagens a partir do início da sessão
-        const q = query(
-            collection(db, "chatMessages"), 
-            where("timestamp", ">=", sessionStartTimeRef.current),
-            orderBy("timestamp", "asc")
-        );
-        const unsubscribeMsg = onSnapshot(q, (querySnapshot) => {
-            const msgs = [];
-            let hasNewMessage = false;
-            querySnapshot.forEach((doc) => {
-                const msgData = { id: doc.id, ...doc.data() };
-                msgs.push(msgData);
-                if (msgData.timestamp && (!lastMessageTimestamp || msgData.timestamp > lastMessageTimestamp)) {
-                    hasNewMessage = true;
-                    lastMessageTimestamp = msgData.timestamp;
-                }
-            });
+        const q = firestore.query(firestore.collection(db, "chatMessages"), firestore.orderBy("timestamp", "asc"));
+        const unsubscribeMsg = firestore.onSnapshot(q, (querySnapshot) => {
+            const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
             const lastMessage = msgs[msgs.length - 1];
-            if (hasNewMessage && lastMessage && lastMessage.uid !== user.uid) {
-                if (!isMuted && notificationSound.current && window.Tone) {
-                    notificationSound.current.triggerAttackRelease("G5", "8n", window.Tone.now());
+            if (lastMessage && lastMessage.uid !== user.uid) {
+                if (!isMuted && notificationSound.current && window.Tone && lastMessage.timestamp) {
+                     const messageTime = lastMessage.timestamp.toDate().getTime();
+                     const now = new Date().getTime();
+                     // Só toca o som para mensagens recentes (últimos 10 segundos)
+                     if ((now - messageTime) < 10000) {
+                        notificationSound.current.triggerAttackRelease("G5", "8n", window.Tone.now());
+                     }
                 }
                 if (isMinimized && popupsEnabled) {
                     setNewNotification(lastMessage);
@@ -96,49 +75,65 @@ const GlobalChat = ({ isVisible, onClose }) => {
 
         const statusRef = ref(rtdb, '/status');
         const unsubscribeStatus = onValue(statusRef, (snapshot) => {
-            const statuses = snapshot.val(); 
-            const online = [];
-            if (statuses) {
-                for (const uid in statuses) {
-                    if (statuses[uid].state === 'online' || statuses[uid].state === 'busy') {
-                        online.push({ uid, ...statuses[uid] });
-                    }
-                }
-            }
+            const statuses = snapshot.val() || {};
+            const online = Object.keys(statuses)
+                .filter(uid => statuses[uid].state === 'online' || statuses[uid].state === 'busy')
+                .map(uid => ({ uid, ...statuses[uid] }));
             setOnlineUsers(online);
         });
-        return () => { unsubscribeMsg(); unsubscribeStatus(); };
-    }, [chatStatus, isMinimized, popupsEnabled, user, isMuted]);
 
-    // Efeito para rolar para a última mensagem
-    useEffect(() => { if (!isMinimized) { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); } }, [messages, isMinimized]);
+        return () => { unsubscribeMsg(); unsubscribeStatus(); };
+    }, [chatStatus, user, isMinimized, popupsEnabled, isMuted]);
 
     const handleSendMessage = async (e) => { 
         e.preventDefault(); 
-        if (newMessage.trim() === '') return; 
+        if (newMessage.trim() === '' || !user) return; 
         setIsLoading(true); 
         const textToSend = newMessage; 
         setNewMessage(''); 
         
         try {
+            await firestore.addDoc(firestore.collection(db, "chatMessages"), { 
+                text: textToSend, 
+                uid: user.uid, 
+                name: user.name, 
+                role: user.role, 
+                timestamp: firestore.serverTimestamp(),
+                isDeleted: false,
+                editedAt: null,
+            });
+
             if (isAiSelected) {
-                await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
                 const prompt = `Você é um assistente virtual da Equipe de Triunfo, especialista em 4Life e Marketing de Rede. Responda à seguinte pergunta de forma útil e objetiva, mantendo-se estritamente dentro desses tópicos. Pergunta do usuário: "${textToSend}"`;
                 const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), });
                 const data = await response.json();
                 if (!response.ok) {
                     throw new Error(data.error || 'Erro na API do Gemini');
                 }
-                await addDoc(collection(db, "chatMessages"), { text: data.text || "Não consegui processar a resposta.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: serverTimestamp() });
-            } else {
-                await addDoc(collection(db, "chatMessages"), { text: textToSend, uid: user.uid, name: user.name, role: user.role, timestamp: serverTimestamp() });
+                await firestore.addDoc(firestore.collection(db, "chatMessages"), { text: data.text || "Não consegui processar a resposta.", uid: 'ai-assistant', name: 'Assistente IA', role: 'ai', timestamp: firestore.serverTimestamp() });
             }
         } catch (error) {
             console.error("Erro ao interagir com a IA ou enviar mensagem:", error);
-            await addDoc(collection(db, "chatMessages"), { text: `Ocorreu um erro: ${error.message}. Tente novamente.`, uid: 'ai-assistant', name: 'Sistema', role: 'ai', timestamp: serverTimestamp() });
+            await firestore.addDoc(firestore.collection(db, "chatMessages"), { text: `Ocorreu um erro: ${error.message}. Tente novamente.`, uid: 'ai-assistant', name: 'Sistema', role: 'ai', timestamp: firestore.serverTimestamp() });
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleUpdateMessage = async (messageId, newText) => {
+        const messageRef = firestore.doc(db, "chatMessages", messageId);
+        await firestore.updateDoc(messageRef, {
+            text: newText,
+            editedAt: firestore.serverTimestamp()
+        });
+    };
+
+    const handleDeleteMessage = async (messageId) => {
+        const messageRef = firestore.doc(db, "chatMessages", messageId);
+        await firestore.updateDoc(messageRef, {
+            text: "Esta mensagem foi apagada.",
+            isDeleted: true
+        });
     };
     
     const getRoleColor = (role) => { switch (role) { case 'admin': return 'text-amber-400'; case 'ai': return 'text-cyan-400'; default: return 'text-slate-500 dark:text-slate-400'; } };
@@ -171,7 +166,11 @@ const GlobalChat = ({ isVisible, onClose }) => {
                 onCloseChat={handleCloseChat}
                 chatSize={chatSize}
             />
-            <ChatBody messages={messages} currentUser={user} getRoleColor={getRoleColor} />
+            <ChatBody 
+                messages={messages} 
+                onUpdateMessage={handleUpdateMessage}
+                onDeleteMessage={handleDeleteMessage}
+            />
             <ChatInput
                 newMessage={newMessage}
                 onNewMessageChange={(e) => setNewMessage(e.target.value)}
@@ -189,3 +188,4 @@ const GlobalChat = ({ isVisible, onClose }) => {
 };
 
 export default GlobalChat;
+
