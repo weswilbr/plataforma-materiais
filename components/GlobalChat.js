@@ -1,17 +1,19 @@
 // NOME DO ARQUIVO: components/GlobalChat.js
-// Versão final refatorada que utiliza hooks e componentes separados.
+// Componente principal do chat, refatorado para usar hooks e componentes separados.
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import useChatManager from './hooks/useChatManager';
 import ChatHeader from './chat/ChatHeader';
 import ChatBody from './chat/ChatBody';
 import ChatFooter from './chat/ChatFooter';
 import MinimizedChat from './chat/MinimizedChat';
+import { useAuth } from '../contexts/AuthContext';
 
 const GlobalChat = ({ isVisible, onClose }) => {
-    // Utiliza o hook para gerir toda a lógica e estado do chat
+    const { user, updateUserChatStatus } = useAuth();
+    const [isOptionsMenuVisible, setIsOptionsMenuVisible] = useState(false);
+
     const {
-        user,
         messages,
         onlineUsers,
         newMessage,
@@ -19,27 +21,16 @@ const GlobalChat = ({ isVisible, onClose }) => {
         isAiSelected,
         setIsAiSelected,
         isLoading,
-        isMuted,
-        setIsMuted,
+        isMinimized,
+        setIsMinimized,
+        newNotification,
         popupsEnabled,
         setPopupsEnabled,
-        newNotification,
+        isMuted,
+        setIsMuted,
         handleSendMessage,
     } = useChatManager();
 
-    const [isMinimized, setIsMinimized] = useState(false);
-    const [isOptionsMenuVisible, setIsOptionsMenuVisible] = useState(false);
-    const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
-
-    // Funções para controlar a visibilidade do menu e do seletor de emojis
-    const toggleOptionsMenu = () => setIsOptionsMenuVisible(!isOptionsMenuVisible);
-    const toggleEmojiPicker = () => setIsEmojiPickerVisible(!isEmojiPickerVisible);
-    const handleEmojiSelect = (emoji) => {
-        setNewMessage(prev => prev + emoji);
-        setIsEmojiPickerVisible(false);
-    };
-
-    // Função para obter a cor do papel (role) do utilizador para a estilização
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin': return 'text-amber-400';
@@ -48,12 +39,13 @@ const GlobalChat = ({ isVisible, onClose }) => {
         }
     };
 
-    // Se o chat não estiver visível, não renderiza nada
-    if (!isVisible) {
-        return null;
-    }
+    const handleCloseChat = () => {
+        updateUserChatStatus('offline');
+        onClose();
+    };
 
-    // Se estiver minimizado, renderiza o componente minimizado
+    if (!isVisible) return null;
+
     if (isMinimized) {
         return (
             <MinimizedChat
@@ -63,38 +55,28 @@ const GlobalChat = ({ isVisible, onClose }) => {
             />
         );
     }
-
-    // Renderiza o chat completo
+    
     return (
         <div className="fixed inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] flex flex-col bg-white dark:bg-indigo-900 md:rounded-lg shadow-2xl z-20 animate-fade-in">
             <ChatHeader
                 onlineUsersCount={onlineUsers.length}
                 isOptionsMenuVisible={isOptionsMenuVisible}
-                toggleOptionsMenu={toggleOptionsMenu}
+                toggleOptionsMenu={() => setIsOptionsMenuVisible(!isOptionsMenuVisible)}
                 isMuted={isMuted}
                 onToggleMute={() => setIsMuted(!isMuted)}
                 onMinimize={() => setIsMinimized(true)}
-                onCloseChat={onClose}
+                onCloseChat={handleCloseChat}
                 onlineUsers={onlineUsers}
                 getRoleColor={getRoleColor}
             />
-
-            <ChatBody
-                messages={messages}
-                currentUser={user}
-                getRoleColor={getRoleColor}
-            />
-
+            <ChatBody messages={messages} currentUser={user} getRoleColor={getRoleColor} />
             <ChatFooter
                 newMessage={newMessage}
-                setNewMessage={setNewMessage}
+                onNewMessageChange={(e) => setNewMessage(e.target.value)}
+                onSendMessage={handleSendMessage}
                 isAiSelected={isAiSelected}
+                onAiToggle={() => setIsAiSelected(!isAiSelected)}
                 isLoading={isLoading}
-                handleSendMessage={handleSendMessage}
-                isEmojiPickerVisible={isEmojiPickerVisible}
-                toggleEmojiPicker={toggleEmojiPicker}
-                handleEmojiSelect={handleEmojiSelect}
-                toggleAiMode={() => setIsAiSelected(!isAiSelected)}
                 popupsEnabled={popupsEnabled}
                 onPopupsToggle={() => setPopupsEnabled(!popupsEnabled)}
             />
