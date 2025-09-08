@@ -63,7 +63,7 @@ export const MaterialCard = ({ item, filePath, onShare }) => {
             </a>
             {onShare && (
                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
-                    <button onClick={() => onShare(item)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                    <button onClick={() => onShare(item, filePath)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
                         <ShareIcon />
                         Partilhar
                     </button>
@@ -102,9 +102,13 @@ const ShareModal = ({ material, onClose }) => {
 
     const handleShare = () => {
         const links = [];
+        const shareUrl = material.type === 'file' 
+            ? `${window.location.origin}/api/download?path=${material.filePath}`
+            : material.url;
+
         const baseMessage = material.productName
-            ? `Olá [NOME], tudo bem? A pensar no nosso último contacto, queria partilhar consigo este material sobre o produto ${material.productName}. Acho que pode ser do seu interesse!\n\n${material.url}`
-            : `Olá [NOME], tudo bem? Queria partilhar consigo este material sobre a nossa oportunidade de negócio. Penso que vai gostar!\n\n${material.url}`;
+            ? `Olá [NOME], tudo bem? A pensar no nosso último contacto, queria partilhar consigo este material sobre o produto ${material.productName}. Acho que pode ser do seu interesse!\n\n${shareUrl}`
+            : `Olá [NOME], tudo bem? Queria partilhar consigo este material sobre a nossa oportunidade de negócio. Penso que vai gostar!\n\n${shareUrl}`;
         
         selectedProspects.forEach(prospectId => {
             const prospect = prospects.find(p => p.id === prospectId);
@@ -174,12 +178,8 @@ export const OpportunityPresenter = () => {
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [selectedMaterial, setSelectedMaterial] = useState(null);
 
-    const handleOpenShare = (material) => {
-        if (!material.url || material.url.startsWith('/api/download')) {
-            alert("A partilha direta de ficheiros ainda não é suportada. Por favor, partilhe um link do YouTube ou outro link público.");
-            return;
-        }
-        setSelectedMaterial(material);
+    const handleOpenShare = (material, filePath) => {
+        setSelectedMaterial({ ...material, filePath });
         setShareModalOpen(true);
     };
 
@@ -305,12 +305,8 @@ export const ProductBrowser = ({ initialProductId, onBack }) => {
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [selectedMaterial, setSelectedMaterial] = useState(null);
 
-    const handleOpenShare = (material) => {
-        if (!material.url || material.url === '#' || material.url.startsWith('/api/download')) {
-            alert("Apenas materiais com link externo (como vídeos ou perfis de produto em PDF) podem ser partilhados diretamente.");
-            return;
-        }
-        setSelectedMaterial(material);
+    const handleOpenShare = (material, filePath) => {
+        setSelectedMaterial({ ...material, filePath });
         setShareModalOpen(true);
     };
 
