@@ -12,7 +12,7 @@ import {
     MaterialViewer, BrochurePresenter, LoyaltyPresenter, TransferFactorPresenter, FactoryPresenter,
     ProductBrowser, OpportunityPresenter, BonusBuilderPresenter, TablesPresenter, GlossaryPresenter,
     RankingPresenter, ChannelsPresenter, MaterialCard, ArtsPresenter
-} from './MaterialPresenters';
+} from './materials';
 import { materialsMap } from '../data/materials';
 
 // --- Ícones ---
