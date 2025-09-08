@@ -1,6 +1,5 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// Versão aprimorada com menu lateral redesenhado com ícones para um visual mais sofisticado.
-// MODIFICAÇÃO: Botão de Sair movido para o cabeçalho do menu para acesso rápido.
+// Versão completa com a nova funcionalidade de Lista de Prospectos integrada.
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -8,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import InviteGenerator from './InviteGenerator';
 import WelcomeScreen from './WelcomeScreen';
 import GlobalChat from './GlobalChat';
+import ProspectsList from './ProspectsList'; // Importa o novo componente
 import {
     MaterialViewer, BrochurePresenter, LoyaltyPresenter, TransferFactorPresenter, FactoryPresenter,
     ProductBrowser, OpportunityPresenter, BonusBuilderPresenter, TablesPresenter, GlossaryPresenter,
@@ -22,6 +22,7 @@ const CloseIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColo
 const SearchIcon = () => <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>;
 
 // --- Ícones do Menu ---
+const ClipboardListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" /></svg>;
 const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
 const ChatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
 const SparklesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>;
@@ -90,6 +91,7 @@ const PlatformLayout = () => {
     const commandMap = {
         'inicio': { title: 'Início', icon: <HomeIcon /> },
         'chat': { title: 'Chat Global', icon: <ChatIcon /> },
+        'prospects': { title: 'Lista de Prospectos', icon: <ClipboardListIcon /> },
         'convite': { title: 'Gerador de Convites', icon: <SparklesIcon /> },
         'ranking': { title: 'Ranking', icon: <TrophyIcon /> },
         'apresentacao': { title: 'Apresentação', icon: <PresentationIcon /> },
@@ -116,7 +118,7 @@ const PlatformLayout = () => {
     const getMenuItems = (role) => {
         const baseMenu = {
             "Geral": ['inicio', 'chat'],
-            "Ferramentas IA": ['convite'],
+            "Ferramentas": ['convite', 'prospects'],
             "Negócio": ['ranking', 'apresentacao', 'marketingrede', 'recompensas2024', 'bonusconstrutor', 'treinamento'],
             "Recursos": ['produtos', 'fatorestransferencia', 'profissionais', 'fabrica4life', 'fidelidade', 'glossario', 'tabelas',  'loja'],
             "Marketing": ['folheteria', 'artes', 'canais'],
@@ -165,6 +167,7 @@ const PlatformLayout = () => {
                     switch (activeCommand) {
                         case 'inicio': return <WelcomeScreen onChatClick={() => handleMenuClick('chat')} />;
                         case 'convite': return <InviteGenerator />;
+                        case 'prospects': return <ProspectsList />;
                         case 'apresentacao': return <OpportunityPresenter />;
                         case 'bonusconstrutor': return <BonusBuilderPresenter />;
                         case 'fabrica4life': return <FactoryPresenter />;
