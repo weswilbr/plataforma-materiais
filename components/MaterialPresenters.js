@@ -1,10 +1,15 @@
 // NOME DO ARQUIVO: components/MaterialPresenters.js
-// Versão final com todos os componentes de materiais, novo design e correções de bugs.
+// COMPONENTE ATUALIZADO: Integrada a funcionalidade de partilha de materiais com a lista de prospectos.
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../firebase';
+import { collection, query, getDocs } from 'firebase/firestore';
+import Image from 'next/image';
 import { materialsMap } from '../data/materials';
 
-// --- ÍCONES SVG ---
+// --- Ícones ---
+const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>;
 const VideoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>;
 const PdfIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M4 12V4a2 2 0 0 1 2-2h8l4 4v4"></path><path d="M4 20h1.5a1.5 1.5 0 0 0 0-3H4v3Z"></path><path d="M14.5 20h1a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2h-1v5Z"></path><path d="M10 15h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v-6Z"></path></svg>;
 const PptIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2Z"></path><path d="M4 15h16"></path><path d="M8 11h.01"></path><path d="M12 11h.01"></path><path d="M16 11h.01"></path><path d="M8 7h.01"></path><path d="M12 7h.01"></path><path d="M16 7h.01"></path></svg>;
@@ -12,6 +17,7 @@ const YoutubeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" hei
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>;
 const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
 const DefaultIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z"></path><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg>;
+const WhatsAppIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16.75 13.96c.25.13.42.2.46.2a.38.38 0 0 1 .18.42c-.06.26-.45.9-.56 1.05c-.1.15-.26.2-.4.13c-.15-.06-.6-.26-1.12-.5c-.54-.25-1.04-.58-1.48-.98c-.44-.4-.8-1-.9-1.16c-.1-.18-.04-.28.04-.38c.08-.08.18-.2.25-.26c.08-.08.13-.13.18-.2a.5.5 0 0 0 .04-.42c-.05-.13-.45-1.08-.6-1.48c-.16-.4-.3-.34-.42-.34c-.1-.02-1 .08-1.13.08c-.13 0-.3.03-.45.2c-.15.15-.58.55-.58 1.35s.6 1.58.68 1.7c.08.1.58 1.25 2 2.3c1.4 1.05 2.15 1.25 2.53 1.25c.38 0 .6-.08.7-.28c.1-.2.45-.85.5-1.1c.06-.25.04-.48-.03-.55c-.08-.08-.18-.13-.38-.23zM12 2C6.5 2 2 6.5 2 12s4.5 10 10 10s10-4.5 10-10s-4.5-10-10-10zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8s8 3.6 8 8s-3.6 8-8 8z" /></svg>;
 
 
 // --- COMPONENTES AUXILIARES ---
@@ -29,7 +35,7 @@ export const MaterialViewer = ({ title, children }) => (
     </div>
 );
 
-export const MaterialCard = ({ item, filePath }) => {
+export const MaterialCard = ({ item, filePath, onShare }) => {
     const getIcon = (type, title) => {
         if (title.toLowerCase().includes('vídeo')) return <VideoIcon />;
         if (title.toLowerCase().includes('pdf') || title.toLowerCase().includes('guia')) return <PdfIcon />;
@@ -45,19 +51,161 @@ export const MaterialCard = ({ item, filePath }) => {
     const downloadAttribute = item.type === 'file' ? {} : { download: true };
 
     return (
-        <a href={url} target={target} rel="noopener noreferrer" {...downloadAttribute} className="group p-6 bg-white dark:bg-indigo-800 rounded-lg shadow-lg text-left hover:shadow-xl hover:scale-105 transition-transform flex items-start space-x-4">
-            <div className="text-blue-500 dark:text-blue-400 mt-1">
-                {getIcon(item.type, item.title)}
-            </div>
-            <div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.title}</h3>
-                <p className="mt-1 text-slate-600 dark:text-slate-400">{item.description}</p>
-            </div>
-        </a>
+        <div className="group p-6 bg-white dark:bg-indigo-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow flex flex-col justify-between">
+            <a href={url} target={target} rel="noopener noreferrer" {...downloadAttribute} className="flex items-start space-x-4">
+                <div className="text-blue-500 dark:text-blue-400 mt-1 flex-shrink-0">
+                    {getIcon(item.type, item.title)}
+                </div>
+                <div className="flex-grow">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.title}</h3>
+                    <p className="mt-1 text-slate-600 dark:text-slate-400">{item.description}</p>
+                </div>
+            </a>
+            {onShare && (
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                    <button onClick={() => onShare(item)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                        <ShareIcon />
+                        Partilhar com Prospectos
+                    </button>
+                </div>
+            )}
+        </div>
     );
 };
 
+// --- COMPONENTES DE PARTILHA ---
+
+const ShareModal = ({ material, onClose }) => {
+    const { user } = useAuth();
+    const [prospects, setProspects] = useState([]);
+    const [selectedProspects, setSelectedProspects] = useState([]);
+    const [sharedLinks, setSharedLinks] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) return;
+        const fetchProspects = async () => {
+            const q = query(collection(db, `users/${user.uid}/prospects`));
+            const querySnapshot = await getDocs(q);
+            const prospectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setProspects(prospectsData);
+            setIsLoading(false);
+        };
+        fetchProspects();
+    }, [user]);
+
+    const handleSelectProspect = (prospectId) => {
+        setSelectedProspects(prev => 
+            prev.includes(prospectId) ? prev.filter(id => id !== prospectId) : [...prev, prospectId]
+        );
+    };
+
+    const handleShare = () => {
+        const links = [];
+        const baseMessage = `Olá [NOME], tudo bem? Queria partilhar consigo este material sobre a nossa oportunidade de negócio. Penso que vai gostar!\n\n${material.url}`;
+        
+        selectedProspects.forEach(prospectId => {
+            const prospect = prospects.find(p => p.id === prospectId);
+            if (prospect) {
+                const message = baseMessage.replace('[NOME]', prospect.name.split(' ')[0]);
+                const whatsappUrl = `https://wa.me/${prospect.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                links.push({ name: prospect.name, url: whatsappUrl });
+            }
+        });
+        setSharedLinks(links);
+    };
+    
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl w-full max-w-lg">
+                <div className="p-6 border-b dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Partilhar "{material.title}"</h3>
+                </div>
+
+                {sharedLinks.length > 0 ? (
+                    <div className="p-6">
+                        <h4 className="font-semibold mb-4 text-slate-800 dark:text-slate-200">Links de Partilha Gerados:</h4>
+                        <ul className="space-y-3 max-h-64 overflow-y-auto">
+                            {sharedLinks.map(link => (
+                                <li key={link.name}>
+                                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600">
+                                        <span className="font-medium dark:text-white">Enviar para {link.name}</span>
+                                        <span className="flex items-center gap-2 text-green-600 dark:text-green-400"><WhatsAppIcon /> Abrir WhatsApp</span>
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ) : (
+                    <div className="p-6">
+                        <h4 className="font-semibold mb-2 text-slate-800 dark:text-slate-200">Selecione os prospectos:</h4>
+                        <div className="max-h-64 overflow-y-auto border dark:border-slate-700 rounded-lg p-2">
+                            {isLoading ? <p>A carregar prospectos...</p> : prospects.length > 0 ? (
+                                prospects.map(prospect => (
+                                    <label key={prospect.id} className="flex items-center p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+                                        <input type="checkbox" checked={selectedProspects.includes(prospect.id)} onChange={() => handleSelectProspect(prospect.id)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"/>
+                                        <span className="ml-3 text-slate-700 dark:text-slate-300">{prospect.name}</span>
+                                    </label>
+                                ))
+                            ) : <p>Nenhum prospecto encontrado.</p>}
+                        </div>
+                    </div>
+                )}
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3 rounded-b-lg">
+                    <button onClick={onClose} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 font-semibold transition">Fechar</button>
+                    {sharedLinks.length === 0 && (
+                        <button onClick={handleShare} disabled={selectedProspects.length === 0} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition disabled:bg-blue-400">
+                            Gerar Links ({selectedProspects.length})
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 // --- COMPONENTES PRINCIPAIS DE CONTEÚDO ---
+
+export const OpportunityPresenter = () => {
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [selectedMaterial, setSelectedMaterial] = useState(null);
+
+    const handleOpenShare = (material) => {
+        if (material.type === 'file') {
+            alert("A partilha direta de ficheiros ainda não é suportada. Por favor, partilhe um link do YouTube ou outro link público.");
+            return;
+        }
+        setSelectedMaterial(material);
+        setShareModalOpen(true);
+    };
+
+    const handleCloseShare = () => {
+        setShareModalOpen(false);
+        setSelectedMaterial(null);
+    };
+
+    return (
+        <div>
+            <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Apresentação da Oportunidade</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Object.entries(materialsMap.opportunityMaterials).map(([key, item]) => 
+                    <MaterialCard 
+                        key={item.title} 
+                        item={item} 
+                        filePath={`opportunityMaterials.${key}`} 
+                        onShare={handleOpenShare}
+                    />
+                )}
+            </div>
+            {shareModalOpen && selectedMaterial && (
+                <ShareModal material={selectedMaterial} onClose={handleCloseShare} />
+            )}
+        </div>
+    );
+};
+
 
 export const ArtsPresenter = () => {
     const [view, setView] = useState('main');
@@ -210,13 +358,6 @@ export const ProductBrowser = ({ initialProductId, onBack }) => {
     );
 };
 
-export const OpportunityPresenter = () => (
-    <div>
-        <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Apresentação da Oportunidade</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.opportunityMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`opportunityMaterials.${key}`} />)}</div>
-    </div>
-);
-
 export const BonusBuilderPresenter = () => (
     <div>
         <h2 className="text-3xl font-bold mb-6 text-slate-800 dark:text-slate-200">Bônus Construtor</h2>
@@ -358,4 +499,3 @@ export const ChannelsPresenter = () => {
         </div>
     );
 };
-
