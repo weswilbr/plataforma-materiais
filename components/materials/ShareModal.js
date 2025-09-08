@@ -34,6 +34,7 @@ const ShareModal = ({ material, onClose }) => {
 
     const handleShare = () => {
         const links = [];
+        // Constrói a URL completa e pública do ficheiro para partilha externa.
         const shareUrl = `${window.location.origin}${material.url}`;
 
         const baseMessage = material.productName
