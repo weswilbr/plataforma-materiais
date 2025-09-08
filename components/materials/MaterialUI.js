@@ -29,7 +29,7 @@ export const MaterialViewer = ({ title, children }) => (
     </div>
 );
 
-export const MaterialCard = ({ item, onShare }) => {
+export const MaterialCard = ({ item, filePath, onShare }) => {
     const getIcon = (type, title) => {
         if (title.toLowerCase().includes('vídeo')) return <VideoIcon />;
         if (title.toLowerCase().includes('pdf') || title.toLowerCase().includes('guia')) return <PdfIcon />;
@@ -40,9 +40,9 @@ export const MaterialCard = ({ item, onShare }) => {
         return <DefaultIcon />;
     };
 
-    const url = item.url;
-    const target = '_blank';
-    const downloadAttribute = item.type === 'file' ? { download: true } : {};
+    const url = item.type === 'file' ? `/api/download?path=${filePath}` : item.url;
+    const target = item.type === 'link' ? '_blank' : '_self';
+    const downloadAttribute = item.type === 'file' ? {} : { download: true };
 
     return (
         <div className="group p-6 bg-white dark:bg-indigo-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow flex flex-col justify-between">
@@ -57,7 +57,7 @@ export const MaterialCard = ({ item, onShare }) => {
             </a>
             {onShare && (
                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
-                    <button onClick={() => onShare(item)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                    <button onClick={() => onShare(item, filePath)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
                         <ShareIcon />
                         Partilhar
                     </button>
