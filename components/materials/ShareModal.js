@@ -34,9 +34,7 @@ const ShareModal = ({ material, onClose }) => {
 
     const handleShare = () => {
         const links = [];
-        const shareUrl = material.type === 'file' 
-            ? `${window.location.origin}/api/download?path=${material.filePath}`
-            : material.url;
+        const shareUrl = material.url;
 
         const baseMessage = material.productName
             ? `Olá [NOME], tudo bem? A pensar no nosso último contacto, queria partilhar consigo este material sobre o produto ${material.productName}. Acho que pode ser do seu interesse!\n\n${shareUrl}`
@@ -104,3 +102,4 @@ const ShareModal = ({ material, onClose }) => {
 };
 
 export default ShareModal;
+

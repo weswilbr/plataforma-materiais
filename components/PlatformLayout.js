@@ -175,13 +175,13 @@ const PlatformLayout = () => {
                         case 'fidelidade': return <LoyaltyPresenter />;
                         case 'folheteria': return <BrochurePresenter />;
                         case 'artes': return <ArtsPresenter />;
-                        case 'marketingrede': return <MaterialViewer title={commandMap.marketingrede.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.marketingMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`marketingMaterials.${key}`} />)}</div></MaterialViewer>;
-                        case 'recompensas2024': return <MaterialViewer title={commandMap.recompensas2024.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><MaterialCard item={materialsMap.rewardsMaterials.pdf} filePath="rewardsMaterials.pdf" /></div></MaterialViewer>;
-                        case 'treinamento': return <MaterialViewer title={commandMap.treinamento.title}><div className="space-y-6">{Object.entries(materialsMap.trainingMaterials).map(([category, items]) => (<div key={category}><h3 className="text-xl font-semibold mb-4">{category}</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{items.map((item, index) => <MaterialCard key={item.title} item={{...item, description: `Baixe o arquivo: ${item.title}`}} filePath={`trainingMaterials.${category}[${index}]`} />)}</div></div>))}</div></MaterialViewer>;
+                        case 'marketingrede': return <MaterialViewer title={commandMap.marketingrede.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.marketingMaterials).map(([key, item]) => <MaterialCard key={item.title} item={item} />)}</div></MaterialViewer>;
+                        case 'recompensas2024': return <MaterialViewer title={commandMap.recompensas2024.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><MaterialCard item={materialsMap.rewardsMaterials.pdf} /></div></MaterialViewer>;
+                        case 'treinamento': return <MaterialViewer title={commandMap.treinamento.title}><div className="space-y-6">{Object.entries(materialsMap.trainingMaterials).map(([category, items]) => (<div key={category}><h3 className="text-xl font-semibold mb-4">{category}</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{items.map((item, index) => <MaterialCard key={item.title} item={{...item, description: `Baixe o arquivo: ${item.title}`}} />)}</div></div>))}</div></MaterialViewer>;
                         case 'tabelas': return <TablesPresenter />;
                         case 'glossario': return <GlossaryPresenter />;
                         case 'ranking': return <RankingPresenter />;
-                        case 'profissionais': return <MaterialViewer title={commandMap.profissionais.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.professionalTestimonials).map(([key, item]) => <MaterialCard key={item.title} item={item} filePath={`professionalTestimonials.${key}`} />)}</div></MaterialViewer>;
+                        case 'profissionais': return <MaterialViewer title={commandMap.profissionais.title}><div className="grid grid-cols-1 md:grid-cols-2 gap-6">{Object.entries(materialsMap.professionalTestimonials).map(([key, item]) => <MaterialCard key={item.title} item={item} />)}</div></MaterialViewer>;
                         case 'canais': return <ChannelsPresenter />;
                         default: return <MaterialViewer title={commandMap[activeCommand]?.title || ''} />;
                     }
