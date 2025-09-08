@@ -1,5 +1,6 @@
 // NOME DO ARQUIVO: contexts/AuthContext.js
 // Lógica de autenticação aprimorada para gerir o estado online do chat de forma mais explícita.
+// MODIFICAÇÃO: Adicionado comentário explicativo sobre o objeto 'user'.
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
@@ -46,6 +47,8 @@ export function AuthProvider({ children }) {
                 const userDoc = await getDoc(userDocRef);
                 
                 if (userDoc.exists()) {
+                    // Este objeto 'user' (com uid, email, name, role) é disponibilizado para toda a aplicação
+                    // e é essencial para funcionalidades como a Lista de Prospectos, que armazena dados por utilizador.
                     setUser({ uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() });
                 } else {
                     signOut(auth);
@@ -103,4 +106,3 @@ export function AuthProvider({ children }) {
         </AuthContext.Provider>
     );
 }
-

@@ -1,6 +1,5 @@
 // NOME DO ARQUIVO: components/ProspectsList.js
-// NOVO COMPONENTE: Gerencia a lista de prospectos de marketing de rede.
-// Permite adicionar, editar, remover e acompanhar o status de cada prospecto.
+// COMPONENTE ATUALIZADO: Adicionado campo de telefone e melhorias na validação e exibição.
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,22 +15,28 @@ const WhatsAppIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" he
 const AddProspectForm = ({ onAdd, isLoading }) => {
     const [name, setName] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
+    const [phone, setPhone] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!name.trim() || !whatsapp.trim()) {
-            alert('Nome e WhatsApp são obrigatórios.');
+        if (!name.trim() || !whatsapp.trim() || !phone.trim()) {
+            alert('Todos os campos são obrigatórios.');
             return;
         }
-        onAdd({ name, whatsapp });
+        if (!/^\d{10,13}$/.test(phone)) {
+            alert('O número de telefone deve conter entre 10 a 13 dígitos.');
+            return;
+        }
+        onAdd({ name, whatsapp, phone });
         setName('');
         setWhatsapp('');
+        setPhone('');
     };
 
     return (
         <form onSubmit={handleSubmit} className="p-6 bg-slate-50 dark:bg-indigo-800/50 rounded-lg shadow-md mb-8">
             <h3 className="text-xl font-bold mb-4 text-slate-800 dark:text-slate-200">Adicionar Novo Prospecto</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <input
                     type="text"
                     value={name}
@@ -46,6 +51,13 @@ const AddProspectForm = ({ onAdd, isLoading }) => {
                     placeholder="WhatsApp (ex: 55119...)"
                     className="md:col-span-1 w-full bg-white dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                 />
+                <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Telefone (ex: 55119...)"
+                    className="md:col-span-1 w-full bg-white dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                />
                 <button type="submit" disabled={isLoading} className="md:col-span-1 w-full bg-blue-600 text-white font-semibold rounded-lg px-6 py-3 hover:bg-blue-700 active:bg-blue-800 transition shadow-lg disabled:bg-slate-400 flex items-center justify-center gap-2">
                     {isLoading ? <div className="loader"></div> : <><PlusIcon /> Adicionar</>}
                 </button>
@@ -57,6 +69,7 @@ const AddProspectForm = ({ onAdd, isLoading }) => {
 const EditProspectModal = ({ prospect, onSave, onClose, isLoading }) => {
     const [name, setName] = useState(prospect.name);
     const [whatsapp, setWhatsapp] = useState(prospect.whatsapp);
+    const [phone, setPhone] = useState(prospect.phone || '');
     const [status, setStatus] = useState(prospect.status || 'contato-inicial');
 
     const statusOptions = {
@@ -70,11 +83,11 @@ const EditProspectModal = ({ prospect, onSave, onClose, isLoading }) => {
     };
     
     const handleSave = () => {
-        if (!name.trim() || !whatsapp.trim()) {
-            alert('Nome e WhatsApp são obrigatórios.');
+        if (!name.trim() || !whatsapp.trim() || !phone.trim()) {
+            alert('Todos os campos são obrigatórios.');
             return;
         }
-        onSave(prospect.id, { name, whatsapp, status });
+        onSave(prospect.id, { name, whatsapp, phone, status });
     };
 
     return (
@@ -86,6 +99,7 @@ const EditProspectModal = ({ prospect, onSave, onClose, isLoading }) => {
                 <div className="p-6 space-y-4">
                      <div><label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Nome</label><input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"/></div>
                      <div><label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">WhatsApp</label><input type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"/></div>
+                     <div><label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Telefone</label><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"/></div>
                      <div><label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Status</label><select value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"><option value="" disabled>Selecione um status</option>{Object.entries(statusOptions).map(([key, value]) => (<option key={key} value={key}>{value}</option>))}</select></div>
                 </div>
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3 rounded-b-lg">
@@ -190,18 +204,20 @@ const ProspectsList = () => {
                             <tr>
                                 <th scope="col" className="px-6 py-3">Nome</th>
                                 <th scope="col" className="px-6 py-3">Status</th>
-                                <th scope="col" className="px-6 py-3">Contato</th>
+                                <th scope="col" className="px-6 py-3">Telefone</th>
+                                <th scope="col" className="px-6 py-3">WhatsApp</th>
                                 <th scope="col" className="px-6 py-3 text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
-                                <tr><td colSpan="4" className="text-center p-8">A carregar lista...</td></tr>
+                                <tr><td colSpan="5" className="text-center p-8">A carregar lista...</td></tr>
                             ) : prospects.length > 0 ? (
                                 prospects.map(p => (
                                 <tr key={p.id} className="border-b dark:border-indigo-800 hover:bg-slate-50 dark:hover:bg-indigo-800/50">
                                     <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{p.name}</td>
                                     <td className="px-6 py-4">{getStatusBadge(p.status)}</td>
+                                    <td className="px-6 py-4">{p.phone}</td>
                                     <td className="px-6 py-4">
                                         <a href={`https://wa.me/${p.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-green-600 dark:text-green-400 hover:underline">
                                             <WhatsAppIcon /> {p.whatsapp}
@@ -214,7 +230,7 @@ const ProspectsList = () => {
                                 </tr>
                                 ))
                             ) : (
-                                <tr><td colSpan="4" className="text-center p-8">Ainda não há prospectos. Comece por adicionar um!</td></tr>
+                                <tr><td colSpan="5" className="text-center p-8">Ainda não há prospectos. Comece por adicionar um!</td></tr>
                             )}
                         </tbody>
                     </table>
