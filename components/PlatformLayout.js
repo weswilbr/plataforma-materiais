@@ -1,5 +1,6 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
 // Versão aprimorada com menu lateral redesenhado com ícones para um visual mais sofisticado.
+// MODIFICAÇÃO: Botão de Sair movido para o cabeçalho do menu para acesso rápido.
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -190,7 +191,8 @@ const PlatformLayout = () => {
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-200">
             {isSidebarOpen && (<div className="fixed inset-0 bg-black opacity-50 z-30 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>)}
             
-            <aside className={`fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-80 p-6 h-screen overflow-y-auto shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+            <aside className={`fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-80 p-6 h-screen shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+                {/* Top Section: Header + User Info + Logout */}
                 <div>
                     <div className="flex justify-between items-center mb-2">
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Plataforma</h1>
@@ -198,58 +200,63 @@ const PlatformLayout = () => {
                             <CloseIcon />
                         </button>
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Bem-vindo, {user?.name}!</p>
-                    <nav className="space-y-6">
-                        {Object.entries(menuItems).map(([category, commands]) => (
-                            <div key={category}>
-                                <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 px-4">{category}</h3>
-                                <ul className="space-y-1">
-                                    {commands.map(command => {
-                                        if (command === 'produtos') {
-                                            return (
-                                                <li key={command}>
-                                                    <details className="group/submenu">
-                                                        <summary className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium flex items-center justify-between gap-4 cursor-pointer list-none ${activeCommand === command ? 'bg-blue-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
-                                                            <div className="flex items-center gap-4">
-                                                                <span className="w-6 h-6">{commandMap[command].icon}</span>
-                                                                <span>{commandMap[command].title}</span>
-                                                            </div>
-                                                            <svg className="w-4 h-4 transform group-open/submenu:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                                                        </summary>
-                                                        <ul className="space-y-1 pl-6 mt-2 border-l-2 border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto">
-                                                            {materialsMap.individualProducts.map(product => (
-                                                                <li key={product.id}>
-                                                                    <button onClick={() => handleProductClick(product.id)} className={`w-full text-left px-4 py-2 rounded-lg transition duration-200 text-sm flex items-center gap-3 ${selectedProductId === product.id ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-slate-500 dark:text-slate-400'} hover:bg-slate-100 dark:hover:bg-slate-700`}>
-                                                                        <Image src={product.image} alt={product.name} width={24} height={24} className="rounded-full bg-slate-200 object-contain" />
-                                                                        <span>{product.name}</span>
-                                                                    </button>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            );
-                                        }
+                    <div className="flex items-center justify-between mb-6 border-b border-slate-200 dark:border-slate-700 pb-4">
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Bem-vindo, {user?.name}!</p>
+                        <button onClick={handleLogout} disabled={isLoggingOut} title="Sair da Conta" className="p-2 rounded-lg transition duration-200 ease-in-out text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-70">
+                           {isLoggingOut ? <div className="loader h-5 w-5"></div> : <LogoutIcon />}
+                        </button>
+                    </div>
+                </div>
+                
+                {/* Middle Section: Navigation (Scrollable) */}
+                <nav className="flex-grow space-y-6 overflow-y-auto -mr-3 pr-3">
+                    {Object.entries(menuItems).map(([category, commands]) => (
+                        <div key={category}>
+                            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 px-4">{category}</h3>
+                            <ul className="space-y-1">
+                                {commands.map(command => {
+                                    if (command === 'produtos') {
                                         return (
                                             <li key={command}>
-                                                <button onClick={() => handleMenuClick(command)} className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium flex items-center gap-4 ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
-                                                    <span className="w-6 h-6">{commandMap[command].icon}</span>
-                                                    <span>{commandMap[command].title}</span>
-                                                </button>
+                                                <details className="group/submenu">
+                                                    <summary className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium flex items-center justify-between gap-4 cursor-pointer list-none ${activeCommand === command ? 'bg-blue-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                                                        <div className="flex items-center gap-4">
+                                                            <span className="w-6 h-6">{commandMap[command].icon}</span>
+                                                            <span>{commandMap[command].title}</span>
+                                                        </div>
+                                                        <svg className="w-4 h-4 transform group-open/submenu:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                    </summary>
+                                                    <ul className="space-y-1 pl-6 mt-2 border-l-2 border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto">
+                                                        {materialsMap.individualProducts.map(product => (
+                                                            <li key={product.id}>
+                                                                <button onClick={() => handleProductClick(product.id)} className={`w-full text-left px-4 py-2 rounded-lg transition duration-200 text-sm flex items-center gap-3 ${selectedProductId === product.id ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-slate-500 dark:text-slate-400'} hover:bg-slate-100 dark:hover:bg-slate-700`}>
+                                                                    <Image src={product.image} alt={product.name} width={24} height={24} className="rounded-full bg-slate-200 object-contain" />
+                                                                    <span>{product.name}</span>
+                                                                </button>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </details>
                                             </li>
                                         );
-                                    })}
-                                </ul>
-                            </div>
-                        ))}
-                    </nav>
-                </div>
-                <div>
+                                    }
+                                    return (
+                                        <li key={command}>
+                                            <button onClick={() => handleMenuClick(command)} className={`w-full text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium flex items-center gap-4 ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                                                <span className="w-6 h-6">{commandMap[command].icon}</span>
+                                                <span>{commandMap[command].title}</span>
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    ))}
+                </nav>
+                
+                {/* Bottom Section: Theme Switcher */}
+                <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-4">
                     <ThemeSwitcher />
-                    <button onClick={handleLogout} disabled={isLoggingOut} className="w-full mt-2 text-left px-4 py-2.5 rounded-lg transition duration-200 ease-in-out text-md font-medium text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center justify-between disabled:opacity-70">
-                        <span>{isLoggingOut ? 'A Sair...' : 'Sair da Conta'}</span>
-                        {isLoggingOut ? <div className="loader"></div> : <LogoutIcon />}
-                    </button>
                 </div>
             </aside>
             
@@ -283,3 +290,4 @@ const PlatformLayout = () => {
 };
 
 export default PlatformLayout;
+
