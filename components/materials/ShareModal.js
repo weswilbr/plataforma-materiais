@@ -34,7 +34,7 @@ const ShareModal = ({ material, onClose }) => {
 
     const handleShare = () => {
         const links = [];
-        const shareUrl = material.url;
+        const shareUrl = `${window.location.origin}${material.url}`;
 
         const baseMessage = material.productName
             ? `Olá [NOME], tudo bem? A pensar no nosso último contacto, queria partilhar consigo este material sobre o produto ${material.productName}. Acho que pode ser do seu interesse!\n\n${shareUrl}`
