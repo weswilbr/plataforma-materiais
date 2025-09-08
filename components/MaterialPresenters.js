@@ -1,5 +1,5 @@
 // NOME DO ARQUIVO: components/MaterialPresenters.js
-// COMPONENTE ATUALIZADO: Integrada a funcionalidade de partilha de materiais com a lista de prospectos.
+// COMPONENTE ATUALIZADO: Integrada a funcionalidade de partilha de materiais com a lista de prospectos para a Apresentação e para os Produtos.
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -65,7 +65,7 @@ export const MaterialCard = ({ item, filePath, onShare }) => {
                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
                     <button onClick={() => onShare(item)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
                         <ShareIcon />
-                        Partilhar com Prospectos
+                        Partilhar
                     </button>
                 </div>
             )}
@@ -102,7 +102,9 @@ const ShareModal = ({ material, onClose }) => {
 
     const handleShare = () => {
         const links = [];
-        const baseMessage = `Olá [NOME], tudo bem? Queria partilhar consigo este material sobre a nossa oportunidade de negócio. Penso que vai gostar!\n\n${material.url}`;
+        const baseMessage = material.productName
+            ? `Olá [NOME], tudo bem? A pensar no nosso último contacto, queria partilhar consigo este material sobre o produto ${material.productName}. Acho que pode ser do seu interesse!\n\n${material.url}`
+            : `Olá [NOME], tudo bem? Queria partilhar consigo este material sobre a nossa oportunidade de negócio. Penso que vai gostar!\n\n${material.url}`;
         
         selectedProspects.forEach(prospectId => {
             const prospect = prospects.find(p => p.id === prospectId);
@@ -173,7 +175,7 @@ export const OpportunityPresenter = () => {
     const [selectedMaterial, setSelectedMaterial] = useState(null);
 
     const handleOpenShare = (material) => {
-        if (material.type === 'file') {
+        if (!material.url || material.url.startsWith('/api/download')) {
             alert("A partilha direta de ficheiros ainda não é suportada. Por favor, partilhe um link do YouTube ou outro link público.");
             return;
         }
@@ -300,6 +302,22 @@ export const ProductBrowser = ({ initialProductId, onBack }) => {
     const [generatedPitches, setGeneratedPitches] = useState({});
     const [isPitchLoading, setIsPitchLoading] = useState(null);
     const [pitchCopyButtonText, setPitchCopyButtonText] = useState({});
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [selectedMaterial, setSelectedMaterial] = useState(null);
+
+    const handleOpenShare = (material) => {
+        if (!material.url || material.url === '#' || material.url.startsWith('/api/download')) {
+            alert("Apenas materiais com link externo (como vídeos ou perfis de produto em PDF) podem ser partilhados diretamente.");
+            return;
+        }
+        setSelectedMaterial(material);
+        setShareModalOpen(true);
+    };
+
+    const handleCloseShare = () => {
+        setShareModalOpen(false);
+        setSelectedMaterial(null);
+    };
 
     useEffect(() => {
         if (initialProductId) {
@@ -329,31 +347,36 @@ export const ProductBrowser = ({ initialProductId, onBack }) => {
                 <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-200">{selectedProduct.name}</h2>
                 <button onClick={onBack} className="bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition">&larr; Voltar ao Início</button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {selectedProduct.options.map(option => {
-                    if (option === 'pitch_venda') {
-                        const pitches = Array.isArray(generatedPitches[selectedProduct.id]) ? generatedPitches[selectedProduct.id] : [];
-                        return (
-                            <div key={option} className="bg-white dark:bg-indigo-800 p-4 rounded-lg shadow-md col-span-1 md:col-span-2 lg:col-span-3">
-                                <h3 className="font-semibold text-lg mb-2 dark:text-white">Copy de Anúncio com IA</h3>
-                                <div className="space-y-4">
-                                    {pitches.length > 0 ? (pitches.map((pitch, index) => (<div key={index} className="bg-slate-100 dark:bg-indigo-700 p-3 rounded-lg"><p className="whitespace-pre-wrap text-slate-800 dark:text-slate-200">{pitch}</p><div className="text-right mt-2"><button onClick={() => handleCopyPitch(pitch, selectedProduct.id, index)} className="bg-slate-200 dark:bg-indigo-600 text-slate-700 dark:text-slate-300 font-semibold rounded-md px-3 py-1 text-sm hover:bg-slate-300 dark:hover:bg-indigo-500 transition">{pitchCopyButtonText[`${selectedProduct.id}-${index}`] || 'Copiar'}</button></div></div>))) : (<p className="text-slate-500 dark:text-slate-400 text-center py-4">Clique no botão abaixo para gerar 3 opções de copy...</p>)}
-                                </div>
-                                <button onClick={() => handleGeneratePitchClick(selectedProduct.id, selectedProduct.name)} disabled={isPitchLoading === selectedProduct.id} className="mt-4 w-full bg-blue-600 text-white font-semibold rounded-lg px-4 py-2 hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:bg-slate-400">{isPitchLoading === selectedProduct.id ? (<><div className="loader"></div><span>Gerando...</span></>) : ('✨ Gerar 3 Opções de Copy')}</button>
-                            </div>
-                        );
-                    }
-                    
                     const contentInfo = selectedProduct.content?.[option];
                     const materialItem = {
                         type: contentInfo?.type || 'file',
                         title: option.charAt(0).toUpperCase() + option.slice(1).replace(/_/g, ' '),
                         description: contentInfo ? `Acesse o material: ${option.replace(/_/g, ' ')}` : 'Conteúdo em breve.',
-                        url: contentInfo?.url || '#'
+                        url: contentInfo?.url || '#',
+                        productName: selectedProduct.name, // Adiciona o nome do produto ao material
                     };
-                    return <MaterialCard key={option} item={materialItem} filePath={`productData.${selectedProduct.id}.content.${option}`} />;
+
+                    if (option === 'pitch_venda') {
+                        const pitches = Array.isArray(generatedPitches[selectedProduct.id]) ? generatedPitches[selectedProduct.id] : [];
+                        return (
+                            <div key={option} className="bg-white dark:bg-indigo-800 p-6 rounded-lg shadow-lg col-span-1 md:col-span-2 lg:col-span-3">
+                                <h3 className="font-semibold text-xl mb-4 dark:text-white">Copy de Anúncio com IA</h3>
+                                <div className="space-y-4">
+                                    {pitches.length > 0 ? (pitches.map((pitch, index) => (<div key={index} className="bg-slate-100 dark:bg-indigo-700 p-4 rounded-lg"><p className="whitespace-pre-wrap text-slate-800 dark:text-slate-200">{pitch}</p><div className="text-right mt-2"><button onClick={() => handleCopyPitch(pitch, selectedProduct.id, index)} className="bg-slate-200 dark:bg-indigo-600 text-slate-700 dark:text-slate-300 font-semibold rounded-md px-3 py-1 text-sm hover:bg-slate-300 dark:hover:bg-indigo-500 transition">{pitchCopyButtonText[`${selectedProduct.id}-${index}`] || 'Copiar'}</button></div></div>))) : (<p className="text-slate-500 dark:text-slate-400 text-center py-4">Clique no botão abaixo para gerar 3 opções de copy...</p>)}
+                                </div>
+                                <button onClick={() => handleGeneratePitchClick(selectedProduct.id, selectedProduct.name)} disabled={isPitchLoading === selectedProduct.id} className="mt-6 w-full bg-blue-600 text-white font-semibold rounded-lg px-4 py-3 hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:bg-slate-400">{isPitchLoading === selectedProduct.id ? (<><div className="loader"></div><span>Gerando...</span></>) : ('✨ Gerar 3 Opções de Copy')}</button>
+                            </div>
+                        );
+                    }
+                    
+                    return <MaterialCard key={option} item={materialItem} filePath={`productData.${selectedProduct.id}.content.${option}`} onShare={handleOpenShare} />;
                 })}
             </div>
+             {shareModalOpen && selectedMaterial && (
+                <ShareModal material={selectedMaterial} onClose={handleCloseShare} />
+            )}
         </div>
     );
 };
@@ -499,3 +522,4 @@ export const ChannelsPresenter = () => {
         </div>
     );
 };
+
