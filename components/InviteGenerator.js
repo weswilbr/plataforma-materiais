@@ -1,12 +1,54 @@
 // NOME DO ARQUIVO: components/InviteGenerator.js
-// ATUALIZAÇÃO: Os controlos de rolagem, velocidade e fonte do teleprompter
-// foram agrupados numa secção dedicada para uma melhor experiência de utilizador.
+// ATUALIZAÇÃO: A interface do teleprompter foi otimizada para dispositivos móveis,
+// com controlos mais compactos e uma nova janela de pré-visualização em tela cheia.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Icons from './icons'; // Importa todos os ícones de um só lugar
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+
+// --- Ícone para a nova funcionalidade ---
+const FullscreenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>;
+
+
+// --- Componente para Pré-visualização ---
+const PreviewModal = ({ preview, onClose }) => {
+    const playerRef = useRef(null);
+
+    const handleFullscreen = () => {
+        if (playerRef.current && playerRef.current.requestFullscreen) {
+            playerRef.current.requestFullscreen();
+        }
+    };
+
+    if (!preview.url) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div className="relative w-full h-full max-w-4xl max-h-4xl" onClick={(e) => e.stopPropagation()}>
+                {preview.type === 'video' ? (
+                    <video ref={playerRef} src={preview.url} controls autoPlay className="w-full h-full rounded-lg"></video>
+                ) : (
+                    <div className="w-full h-full flex items-center">
+                        <audio src={preview.url} controls autoPlay className="w-full"></audio>
+                    </div>
+                )}
+                <div className="absolute top-4 right-4 flex gap-2">
+                    {preview.type === 'video' && (
+                         <button onClick={handleFullscreen} className="p-2 bg-slate-700/50 hover:bg-slate-700 rounded-full text-white" title="Tela Cheia">
+                            <FullscreenIcon />
+                        </button>
+                    )}
+                    <button onClick={onClose} className="p-2 bg-slate-700/50 hover:bg-slate-700 rounded-full text-white" title="Fechar">
+                        <Icons.CloseIcon />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 // --- Componente para Selecionar Prospecto ---
 const ProspectSelectModal = ({ onSelect, onClose }) => {
@@ -82,6 +124,7 @@ const TeleprompterModal = ({ text, onClose }) => {
     const [selectedRecording, setSelectedRecording] = useState(null);
     const [isProspectModalOpen, setIsProspectModalOpen] = useState(false);
     const [preview, setPreview] = useState({ url: null, type: null });
+    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
     // --- Estados para Teleprompter ---
     const [isScrolling, setIsScrolling] = useState(false);
@@ -156,7 +199,6 @@ const TeleprompterModal = ({ text, onClose }) => {
         const transaction = dbInstance.transaction(['recordings'], 'readwrite');
         transaction.objectStore('recordings').delete(id).onsuccess = () => {
             fetchRecordings();
-            setPreview({ url: null, type: null }); // Limpa a pré-visualização se o ficheiro for apagado
         };
     };
 
@@ -165,7 +207,6 @@ const TeleprompterModal = ({ text, onClose }) => {
         const transaction = dbInstance.transaction(['recordings'], 'readwrite');
         transaction.objectStore('recordings').clear().onsuccess = () => {
             fetchRecordings();
-            setPreview({ url: null, type: null });
         };
     };
     
@@ -205,6 +246,7 @@ const TeleprompterModal = ({ text, onClose }) => {
     const handlePreview = (rec) => {
         const url = URL.createObjectURL(rec.blob);
         setPreview({ url, type: rec.type });
+        setIsPreviewModalOpen(true);
     };
 
     const shareRecording = async (prospect, recording) => {
@@ -235,23 +277,23 @@ const TeleprompterModal = ({ text, onClose }) => {
     };
 
     return (
-       <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+       <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-2 sm:p-4">
             <div className="bg-slate-900 border border-slate-700 rounded-lg shadow-2xl w-full h-full flex flex-col">
-                <header className="flex justify-between items-center p-4 border-b border-slate-700 flex-shrink-0">
-                    <h3 className="text-xl font-bold text-white flex items-center gap-3"><Icons.PresentationIcon /> Modo Roteiro</h3>
+                <header className="flex justify-between items-center p-3 md:p-4 border-b border-slate-700 flex-shrink-0">
+                    <h3 className="text-lg md:text-xl font-bold text-white flex items-center gap-3"><Icons.PresentationIcon /> Modo Roteiro</h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-white p-2 rounded-full">&times;</button>
                 </header>
-                <main className="flex-grow flex flex-col md:flex-row gap-4 p-4 overflow-hidden">
+                <main className="flex-grow flex flex-col md:flex-row gap-2 md:gap-4 p-2 md:p-4 overflow-hidden">
                     {/* Coluna Principal: Vídeo com sobreposição de texto */}
-                    <div className="flex-1 flex flex-col bg-black rounded-lg overflow-hidden relative">
+                    <div className="flex-1 flex flex-col bg-black rounded-lg overflow-hidden relative min-h-[40vh] md:min-h-0">
                         <video ref={videoRef} autoPlay muted className="absolute inset-0 w-full h-full object-cover"></video>
-                        {!isRecording && (
+                        {!isRecording && !streamRef.current && (
                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <span className="text-slate-400 text-lg bg-black/50 p-4 rounded-lg">A sua câmera aparecerá aqui</span>
+                                <span className="text-slate-400 text-center text-base md:text-lg bg-black/50 p-4 rounded-lg">A sua câmera aparecerá aqui</span>
                              </div>
                         )}
                         <div className="absolute inset-0 flex flex-col pointer-events-none">
-                            <div ref={textContainerRef} className="w-full max-w-4xl mx-auto p-10 overflow-y-scroll scrollbar-hide flex-grow relative pointer-events-auto">
+                            <div ref={textContainerRef} className="w-full max-w-4xl mx-auto p-4 md:p-10 overflow-y-scroll scrollbar-hide flex-grow relative pointer-events-auto">
                                 <div className="absolute top-1/4 left-0 right-0 h-px bg-red-500/70 z-10 pointer-events-none"></div>
                                 <p style={{ fontSize: `${fontSize}px`, lineHeight: 1.5, transform: isMirrored ? 'scaleX(-1)' : 'scaleX(1)' }}
                                    className={`text-white text-center transition-transform duration-300 backdrop-blur-sm bg-black/30 p-4 rounded-lg`}>
@@ -261,11 +303,11 @@ const TeleprompterModal = ({ text, onClose }) => {
                         </div>
                     </div>
                     {/* Coluna de Controlos e Galeria */}
-                    <div className="w-full md:w-96 flex flex-col gap-4 flex-shrink-0">
+                    <div className="w-full md:w-80 flex flex-col gap-2 md:gap-4 flex-shrink-0 md:max-h-full overflow-y-auto">
                         
                         {/* Controlos do Roteiro */}
-                        <div className="bg-slate-800 p-4 rounded-lg space-y-4">
-                            <h4 className="font-bold text-white">Controlos do Roteiro</h4>
+                        <div className="bg-slate-800 p-3 md:p-4 rounded-lg space-y-3 md:space-y-4">
+                            <h4 className="font-bold text-white text-base">Controlos do Roteiro</h4>
                             <div className="flex items-center justify-center gap-4">
                                 <button onClick={() => setIsScrolling(p => !p)} className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition">
                                     {isScrolling ? <Icons.PauseIcon /> : <Icons.PlayIcon />}
@@ -273,46 +315,41 @@ const TeleprompterModal = ({ text, onClose }) => {
                                 <button onClick={handleResetScroll} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition"><Icons.RewindIcon /></button>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
+                                <label className="text-xs md:text-sm font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
                                 <input type="range" min="0.5" max="5" step="0.1" value={scrollSpeed} onChange={(e) => setScrollSpeed(parseFloat(e.target.value))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-300 flex items-center justify-between">Tamanho da Fonte: <span>{fontSize}px</span></label>
-                                <input type="range" min="24" max="96" step="2" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value, 10))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
+                                <label className="text-xs md:text-sm font-medium text-slate-300 flex items-center justify-between">Tamanho da Fonte: <span>{fontSize}px</span></label>
+                                <input type="range" min="20" max="80" step="2" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value, 10))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
                             </div>
                             <div className="flex items-center justify-between">
-                                <label htmlFor="mirror-toggle" className="text-sm font-medium text-slate-300 flex items-center gap-2 cursor-pointer"><Icons.FlipHorizontalIcon /> Espelhar Texto</label>
+                                <label htmlFor="mirror-toggle" className="text-xs md:text-sm font-medium text-slate-300 flex items-center gap-2 cursor-pointer"><Icons.FlipHorizontalIcon /> Espelhar Texto</label>
                                 <input type="checkbox" id="mirror-toggle" checked={isMirrored} onChange={() => setIsMirrored(!isMirrored)} className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded focus:ring-blue-500"/>
                             </div>
                         </div>
 
                         {/* Controlos de Gravação */}
-                        <div className="bg-slate-800 p-4 rounded-lg flex justify-center gap-4">
+                        <div className="bg-slate-800 p-3 md:p-4 rounded-lg flex justify-center gap-4">
                            {!isRecording ? (
                                 <>
-                                    <button onClick={() => startRecording('audio')} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2"><Icons.SoundOnIcon/> Áudio</button>
-                                    <button onClick={() => startRecording('video')} className="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 flex items-center gap-2"><Icons.VideoIcon/> Vídeo</button>
+                                    <button onClick={() => startRecording('audio')} className="bg-blue-600 text-white font-semibold py-2 px-3 text-sm rounded-lg hover:bg-blue-700 flex items-center gap-2"><Icons.SoundOnIcon/> Áudio</button>
+                                    <button onClick={() => startRecording('video')} className="bg-red-600 text-white font-semibold py-2 px-3 text-sm rounded-lg hover:bg-red-700 flex items-center gap-2"><Icons.VideoIcon/> Vídeo</button>
                                 </>
                             ) : (
-                                <button onClick={stopRecording} className="bg-slate-700 text-white font-semibold py-2 px-5 rounded-lg hover:bg-slate-600 flex items-center justify-center gap-2"><Icons.StopIcon/> Parar</button>
+                                <button onClick={stopRecording} className="bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-slate-600 flex items-center justify-center gap-2"><Icons.StopIcon/> Parar</button>
                             )}
                         </div>
-                        {preview.url && (
-                             <div className="bg-black rounded-lg">
-                                {preview.type === 'video' ? <video src={preview.url} controls autoPlay className="w-full rounded-lg"></video> : <audio src={preview.url} controls autoPlay className="w-full"></audio>}
-                             </div>
-                        )}
-
+                        
                         {/* Galeria de Gravações */}
-                        <div className="bg-slate-800 p-4 rounded-lg flex flex-col flex-grow min-h-0">
+                        <div className="bg-slate-800 p-3 md:p-4 rounded-lg flex flex-col flex-grow min-h-0">
                             <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-bold text-white">Minhas Gravações</h4>
+                                <h4 className="font-bold text-white text-base">Minhas Gravações</h4>
                                 <button onClick={deleteAllRecordings} className="text-red-400 hover:text-red-300 text-xs font-semibold">REINICIAR</button>
                             </div>
                             <div className="flex-grow overflow-y-auto space-y-2 pr-2">
                                 {savedRecordings.length > 0 ? savedRecordings.map(rec => (
-                                    <div key={rec.id} className="bg-slate-700 p-3 rounded-lg flex items-center justify-between">
-                                        <div className="flex-grow overflow-hidden">
+                                    <div key={rec.id} className="bg-slate-700 p-2 rounded-lg flex items-center justify-between">
+                                        <div className="flex-grow overflow-hidden mr-2">
                                             <p className="text-white font-medium text-sm truncate">{rec.name}</p>
                                         </div>
                                         <div className="flex items-center gap-1 flex-shrink-0">
@@ -334,6 +371,7 @@ const TeleprompterModal = ({ text, onClose }) => {
                     onSelect={(prospect) => shareRecording(prospect, selectedRecording)}
                 />
             )}
+            {isPreviewModalOpen && <PreviewModal preview={preview} onClose={() => setIsPreviewModalOpen(false)} />}
         </div>
     );
 };
