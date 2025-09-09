@@ -1,12 +1,19 @@
 // NOME DO ARQUIVO: contexts/AuthContext.js
-// REFACTOR: A gestão de presença foi aprimorada com `onDisconnect` do Firebase
-// para garantir que o status do usuário seja atualizado de forma fiável.
+// ATUALIZAÇÃO: A persistência da autenticação foi alterada para 'session',
+// garantindo que o utilizador seja deslogado ao fechar a aba do navegador.
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { 
+    onAuthStateChanged, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    sendPasswordResetEmail,
+    setPersistence,
+    browserSessionPersistence
+} from 'firebase/auth';
 import { auth, db, rtdb } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { ref, set, onDisconnect, serverTimestamp, remove } from "firebase/database";
+import { ref, set, serverTimestamp, onDisconnect, remove } from "firebase/database";
 
 const AuthContext = createContext();
 
@@ -19,33 +26,6 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
     const [chatStatus, setChatStatus] = useState('offline');
 
-    // Efeito para gerir a autenticação e a presença do utilizador
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                const userDocRef = doc(db, "users", firebaseUser.uid);
-                const userDoc = await getDoc(userDocRef);
-                
-                if (userDoc.exists()) {
-                    const userData = { uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() };
-                    setUser(userData);
-                    // Configura a presença na Realtime Database assim que o utilizador é autenticado
-                    const userStatusRef = ref(rtdb, '/status/' + firebaseUser.uid);
-                    onDisconnect(userStatusRef).remove(); // Garante que o estado é limpo se a conexão for perdida
-                } else {
-                    await signOut(auth);
-                    setUser(null);
-                }
-            } else {
-                setUser(null);
-                setChatStatus('offline'); // Garante que o estado do chat é 'offline' ao deslogar
-            }
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    // Função centralizada para atualizar o status na Realtime Database
     const updateUserChatStatus = (state) => {
         if (!user) return;
         const userStatusRef = ref(rtdb, '/status/' + user.uid);
@@ -57,14 +37,38 @@ export function AuthProvider({ children }) {
                 role: user.role, 
                 last_changed: serverTimestamp() 
             });
+            onDisconnect(userStatusRef).remove();
         } else {
             remove(userStatusRef);
         }
         setChatStatus(state);
     };
 
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                
+                if (userDoc.exists()) {
+                    setUser({ uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() });
+                } else {
+                    signOut(auth);
+                    setUser(null);
+                }
+            } else {
+                setUser(null);
+            }
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
     const login = async (email, password) => {
         try {
+            // Define a persistência da autenticação para a sessão atual do navegador.
+            // Isso garante que o usuário seja deslogado ao fechar a aba/navegador.
+            await setPersistence(auth, browserSessionPersistence);
             await signInWithEmailAndPassword(auth, email, password);
             return { success: true };
         } catch (error) {
@@ -74,9 +78,11 @@ export function AuthProvider({ children }) {
     
     const logout = async () => {
         if (user) {
-            await remove(ref(rtdb, '/status/' + user.uid)); // Remove o status ao deslogar manualmente
+            const userStatusRef = ref(rtdb, '/status/' + user.uid);
+            await remove(userStatusRef);
         }
         await signOut(auth);
+        setChatStatus('offline');
     };
 
     const resetPassword = async (email) => {
@@ -88,7 +94,15 @@ export function AuthProvider({ children }) {
         }
     };
 
-    const value = { user, loading, chatStatus, updateUserChatStatus, login, resetPassword, logout };
+    const value = { 
+        user, 
+        loading, 
+        chatStatus, 
+        updateUserChatStatus, 
+        login, 
+        resetPassword, 
+        logout 
+    };
 
     return (
         <AuthContext.Provider value={value}>
@@ -96,3 +110,4 @@ export function AuthProvider({ children }) {
         </AuthContext.Provider>
     );
 }
+
