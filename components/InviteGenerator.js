@@ -1,6 +1,7 @@
 // NOME DO ARQUIVO: components/InviteGenerator.js
-// ATUALIZAÇÃO: O TeleprompterModal agora inclui uma galeria para salvar, listar,
-// apagar e partilhar gravações diretamente para a lista de prospectos via WhatsApp.
+// ATUALIZAÇÃO: O TeleprompterModal foi aprimorado com uma galeria de gravações que
+// agora inclui pré-visualização e uma função de partilha nativa para enviar
+// ficheiros diretamente para os prospectos.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Icons from './icons'; // Importa todos os ícones de um só lugar
@@ -81,6 +82,7 @@ const TeleprompterModal = ({ text, onClose }) => {
     const [savedRecordings, setSavedRecordings] = useState([]);
     const [selectedRecording, setSelectedRecording] = useState(null);
     const [isProspectModalOpen, setIsProspectModalOpen] = useState(false);
+    const [preview, setPreview] = useState({ url: null, type: null });
 
     // --- Estados para Teleprompter ---
     const [isScrolling, setIsScrolling] = useState(false);
@@ -144,28 +146,28 @@ const TeleprompterModal = ({ text, onClose }) => {
         const recording = {
             blob,
             type,
-            name: `Gravação-${new Date().toLocaleString('pt-BR')}.${type === 'video' ? 'webm' : 'ogg'}`,
+            name: `Gravação-${new Date().toLocaleString('pt-BR').replace(/[/:]/g, '-')}.${type === 'video' ? 'webm' : 'ogg'}`,
             timestamp: new Date()
         };
-        const request = store.add(recording);
-        request.onsuccess = () => fetchRecordings();
-        request.onerror = (event) => console.error("Erro ao salvar gravação:", event);
+        store.add(recording).onsuccess = () => fetchRecordings();
     };
 
     const deleteRecording = (id) => {
         if (!dbInstance) return;
         const transaction = dbInstance.transaction(['recordings'], 'readwrite');
-        const store = transaction.objectStore('recordings');
-        const request = store.delete(id);
-        request.onsuccess = () => fetchRecordings();
+        transaction.objectStore('recordings').delete(id).onsuccess = () => {
+            fetchRecordings();
+            setPreview({ url: null, type: null }); // Limpa a pré-visualização se o ficheiro for apagado
+        };
     };
 
     const deleteAllRecordings = () => {
         if (!dbInstance || !confirm("Tem a certeza que quer apagar TODAS as gravações?")) return;
         const transaction = dbInstance.transaction(['recordings'], 'readwrite');
-        const store = transaction.objectStore('recordings');
-        const request = store.clear();
-        request.onsuccess = () => fetchRecordings();
+        transaction.objectStore('recordings').clear().onsuccess = () => {
+            fetchRecordings();
+            setPreview({ url: null, type: null });
+        };
     };
     
     const startRecording = async (type) => {
@@ -200,17 +202,36 @@ const TeleprompterModal = ({ text, onClose }) => {
             if (videoRef.current) videoRef.current.srcObject = null;
         }
     };
+    
+    const handlePreview = (rec) => {
+        const url = URL.createObjectURL(rec.blob);
+        setPreview({ url, type: rec.type });
+    };
 
-    const handleSendToProspect = (prospect) => {
-        const url = URL.createObjectURL(selectedRecording.blob);
-        alert(`Para enviar para ${prospect.name}, por favor, baixe o ficheiro e anexe-o na conversa do WhatsApp que será aberta.`);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = selectedRecording.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.open(`https://wa.me/${prospect.whatsapp.replace(/\D/g, '')}`, '_blank');
+    const shareRecording = async (prospect, recording) => {
+        const file = new File([recording.blob], recording.name, { type: recording.blob.type });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: 'Gravação de Convite',
+                    text: `Olá ${prospect.name}, segue uma mensagem para você.`,
+                });
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Erro ao partilhar:', error);
+                }
+            }
+        } else {
+            alert(`Para enviar para ${prospect.name}, por favor, baixe o ficheiro e anexe-o na conversa do WhatsApp.`);
+            const url = URL.createObjectURL(recording.blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = recording.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
         setIsProspectModalOpen(false);
     };
 
@@ -221,7 +242,6 @@ const TeleprompterModal = ({ text, onClose }) => {
                     <h3 className="text-xl font-bold text-white flex items-center gap-3"><Icons.PresentationIcon /> Modo Roteiro</h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-white p-2 rounded-full">&times;</button>
                 </header>
-
                 <main className="flex-grow flex flex-col md:flex-row gap-4 p-4 overflow-hidden">
                     {/* Coluna Principal: Vídeo com sobreposição de texto */}
                     <div className="flex-1 flex flex-col bg-black rounded-lg overflow-hidden relative">
@@ -241,16 +261,8 @@ const TeleprompterModal = ({ text, onClose }) => {
                             </div>
                         </div>
                     </div>
-
                     {/* Coluna de Controlos e Galeria */}
                     <div className="w-full md:w-96 flex flex-col gap-4 flex-shrink-0">
-                        <div className="bg-slate-800 p-4 rounded-lg space-y-4">
-                            <h4 className="font-bold text-white">Controlos do Roteiro</h4>
-                            <div className="flex items-center justify-center gap-4">
-                                <button onClick={() => setIsScrolling(p => !p)} className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-500"><Icons.PlayIcon /></button>
-                                <button onClick={handleResetScroll} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600"><Icons.RewindIcon /></button>
-                            </div>
-                        </div>
                         <div className="bg-slate-800 p-4 rounded-lg flex justify-center gap-4">
                            {!isRecording ? (
                                 <>
@@ -258,33 +270,32 @@ const TeleprompterModal = ({ text, onClose }) => {
                                     <button onClick={() => startRecording('video')} className="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 flex items-center gap-2"><Icons.VideoIcon/> Vídeo</button>
                                 </>
                             ) : (
-                                <button onClick={stopRecording} className="bg-slate-700 text-white font-semibold py-2 px-5 rounded-lg hover:bg-slate-600">Parar Gravação</button>
+                                <button onClick={stopRecording} className="bg-slate-700 text-white font-semibold py-2 px-5 rounded-lg hover:bg-slate-600 flex items-center justify-center gap-2"><Icons.StopIcon/> Parar</button>
                             )}
                         </div>
-
-                        {/* Galeria de Gravações */}
+                        {preview.url && (
+                             <div className="bg-black rounded-lg">
+                                {preview.type === 'video' ? <video src={preview.url} controls autoPlay className="w-full rounded-lg"></video> : <audio src={preview.url} controls autoPlay className="w-full"></audio>}
+                             </div>
+                        )}
                         <div className="bg-slate-800 p-4 rounded-lg flex flex-col flex-grow min-h-0">
                             <div className="flex justify-between items-center mb-2">
                                 <h4 className="font-bold text-white">Minhas Gravações</h4>
                                 <button onClick={deleteAllRecordings} className="text-red-400 hover:text-red-300 text-xs font-semibold">REINICIAR</button>
                             </div>
                             <div className="flex-grow overflow-y-auto space-y-2 pr-2">
-                                {savedRecordings.length > 0 ? savedRecordings.map(rec => {
-                                    const url = URL.createObjectURL(rec.blob);
-                                    return (
-                                        <div key={rec.id} className="bg-slate-700 p-3 rounded-lg flex items-center justify-between">
-                                            <div>
-                                                <p className="text-white font-medium text-sm">{rec.name}</p>
-                                                <p className="text-xs text-slate-400">{rec.timestamp.toLocaleDateString()}</p>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <a href={url} download={rec.name} className="p-2 text-slate-300 hover:text-white"><Icons.DownloadIcon /></a>
-                                                <button onClick={() => { setSelectedRecording(rec); setIsProspectModalOpen(true); }} className="p-2 text-slate-300 hover:text-white"><Icons.SendIcon /></button>
-                                                <button onClick={() => deleteRecording(rec.id)} className="p-2 text-red-400 hover:text-red-300"><Icons.TrashIcon /></button>
-                                            </div>
+                                {savedRecordings.length > 0 ? savedRecordings.map(rec => (
+                                    <div key={rec.id} className="bg-slate-700 p-3 rounded-lg flex items-center justify-between">
+                                        <div className="flex-grow overflow-hidden">
+                                            <p className="text-white font-medium text-sm truncate">{rec.name}</p>
                                         </div>
-                                    );
-                                }) : <p className="text-slate-500 text-sm text-center pt-8">Nenhuma gravação encontrada.</p>}
+                                        <div className="flex items-center gap-1 flex-shrink-0">
+                                            <button onClick={() => handlePreview(rec)} className="p-2 text-slate-300 hover:text-white"><Icons.PlayCircleIcon /></button>
+                                            <button onClick={() => { setSelectedRecording(rec); setIsProspectModalOpen(true); }} className="p-2 text-slate-300 hover:text-white"><Icons.SendIcon /></button>
+                                            <button onClick={() => deleteRecording(rec.id)} className="p-2 text-red-400 hover:text-red-300"><Icons.TrashIcon /></button>
+                                        </div>
+                                    </div>
+                                )) : <p className="text-slate-500 text-sm text-center pt-8">Nenhuma gravação encontrada.</p>}
                             </div>
                         </div>
                          {error && <p className="text-red-400 text-center text-sm p-2 bg-red-900/50 rounded-lg">{error}</p>}
@@ -294,7 +305,7 @@ const TeleprompterModal = ({ text, onClose }) => {
             {isProspectModalOpen && (
                 <ProspectSelectModal 
                     onClose={() => setIsProspectModalOpen(false)}
-                    onSelect={handleSendToProspect}
+                    onSelect={(prospect) => shareRecording(prospect, selectedRecording)}
                 />
             )}
         </div>
