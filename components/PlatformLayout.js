@@ -1,257 +1,182 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// ATUALIZAÇÃO: Funcionalidade de pesquisa de materiais ativada. A lógica de busca
-// e exibição de resultados foi implementada, e a partilha de materiais foi centralizada.
+// ATUALIZAÇÃO: A barra de menu lateral foi aprimorada para ser retrátil,
+// permitindo ao utilizador minimizar o menu para focar no conteúdo principal.
 
-import { useState, useEffect, useMemo } from 'react';
-import Image from 'next/image';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import InviteGenerator from './InviteGenerator';
 import WelcomeScreen from './WelcomeScreen';
 import GlobalChat from './GlobalChat';
 import ProspectsList from './ProspectsList';
-import {
-    MaterialViewer, BrochurePresenter, LoyaltyPresenter, TransferFactorPresenter, FactoryPresenter,
-    ProductBrowser, OpportunityPresenter, BonusBuilderPresenter, TablesPresenter, GlossaryPresenter,
-    RankingPresenter, ChannelsPresenter, ArtsPresenter, MaterialCard, ShareModal
-} from './materials';
+import * as Materials from './materials';
 import { materialsMap } from '../data';
 import * as Icons from './icons';
+import ThemeSwitcher from './ThemeSwitcher';
 
-// Componente de Tema (sem alterações)
-const ThemeSwitcher = () => {
-    const [theme, setTheme] = useState('light');
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        setTheme(savedTheme);
-        if (savedTheme === 'dark') document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
-    }, []);
-    const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        if (newTheme === 'dark') document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
-    };
+// --- Sub-componente: Item do Menu Lateral ---
+const SidebarItem = ({ command, activeCommand, onMenuClick, isCollapsed }) => {
+    const { title, icon } = materialsMap.commandMap[command];
+    const isActive = activeCommand === command;
+
     return (
-        <button onClick={toggleTheme} title="Mudar Tema" className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
-            <span className="text-xl">{theme === 'light' ? '🌙' : '☀️'}</span>
-        </button>
+        <li className="relative">
+            <button 
+                onClick={() => onMenuClick(command)}
+                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-lg transition-colors duration-200 ${
+                    isActive 
+                        ? 'bg-blue-600 text-white shadow-lg' 
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                } ${isCollapsed ? 'justify-center' : ''}`}
+            >
+                <span className="w-6 h-6 flex-shrink-0">{icon}</span>
+                <span className={`transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{title}</span>
+            </button>
+            {isCollapsed && (
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-3 py-1.5 bg-slate-800 text-white text-sm rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap">
+                    {title}
+                </div>
+            )}
+        </li>
     );
 };
 
+
 const PlatformLayout = () => {
     const [activeCommand, setActiveCommand] = useState('inicio');
-    const [selectedProductId, setSelectedProductId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
-    const { user, logout, chatStatus, updateUserChatStatus } = useAuth();
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const { user, logout } = useAuth();
     const [isChatVisible, setIsChatVisible] = useState(false);
-
-    // --- Estados para Pesquisa e Partilha ---
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
+    const [productView, setProductView] = useState('showcase');
+    const [selectedProductId, setSelectedProductId] = useState(null);
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [selectedMaterial, setSelectedMaterial] = useState(null);
 
-    const commandMap = {
-        'inicio': { title: 'Início', icon: <Icons.HomeIcon /> },
-        'chat': { title: 'Chat Global', icon: <Icons.ChatIcon /> },
-        'prospects': { title: 'Lista de Prospectos', icon: <Icons.ClipboardListIcon /> },
-        'convite': { title: 'Gerador de Convites', icon: <Icons.SparklesIcon /> },
-        'ranking': { title: 'Ranking', icon: <Icons.TrophyIcon /> },
-        'apresentacao': { title: 'Apresentação', icon: <Icons.PresentationIcon /> },
-        'marketingrede': { title: 'Marketing de Rede', icon: <Icons.NetworkIcon /> },
-        'recompensas2024': { title: 'Recompensas', icon: <Icons.GiftIcon /> },
-        'bonusconstrutor': { title: 'Bônus Construtor', icon: <Icons.BuildingIcon /> },
-        'treinamento': { title: 'Treinamentos', icon: <Icons.BookOpenIcon /> },
-        'produtos': { title: 'Produtos', icon: <Icons.PackageIcon /> },
-        'fatorestransferencia': { title: 'Fatores de Transferência', icon: <Icons.DnaIcon /> },
-        'profissionais': { title: 'Profissionais de Saúde', icon: <Icons.UsersIcon /> },
-        'fabrica4life': { title: 'Fábrica 4LIFE', icon: <Icons.FactoryIcon /> },
-        'fidelidade': { title: 'Programa de Fidelidade', icon: <Icons.StarIcon /> },
-        'glossario': { title: 'Glossário', icon: <Icons.HelpCircleIcon /> },
-        'tabelas': { title: 'Tabelas', icon: <Icons.TableIcon /> },
-        'loja': { title: 'Loja Personalizada', icon: <Icons.StoreIcon /> },
-        'folheteria': { title: 'Folheteria', icon: <Icons.NewspaperIcon /> },
-        'artes': { title: 'Criação de Artes', icon: <Icons.PaletteIcon /> },
-        'canais': { title: 'Canais', icon: <Icons.ChannelsIcon /> },
-    };
-    
-    const menuItems = {
-        "Geral": ['inicio', 'chat'],
-        "Ferramentas": ['convite', 'prospects'],
-        "Negócio": ['ranking', 'apresentacao', 'marketingrede', 'recompensas2024', 'bonusconstrutor', 'treinamento'],
-        "Recursos": ['produtos', 'fatorestransferencia', 'profissionais', 'fabrica4life', 'fidelidade', 'glossario', 'tabelas',  'loja'],
-        "Marketing": ['folheteria', 'artes', 'canais'],
-    };
-
-    // --- Lógica de Pesquisa ---
-    const allMaterials = useMemo(() => {
-        const flattened = [];
-        const seenTitles = new Set();
-        
-        const addItem = (item) => {
-            if (item.title && item.url && !seenTitles.has(item.title)) {
-                flattened.push(item);
-                seenTitles.add(item.title);
-            }
-        };
-
-        Object.entries(materialsMap).forEach(([key, data]) => {
-            if (['positionsData', 'glossaryTerms', 'individualProducts'].includes(key)) return;
-            if (key === 'productData') {
-                Object.entries(data).forEach(([prodId, product]) => {
-                    Object.entries(product.content).forEach(([contentKey, contentItem]) => {
-                        addItem({
-                            ...contentItem,
-                            id: `product_${prodId}_${contentKey}`,
-                            title: `${product.name} - ${contentItem.title}`,
-                        });
-                    });
-                });
-            } else if (Array.isArray(data)) {
-                data.forEach(item => addItem(item));
-            } else if (typeof data === 'object' && data !== null) {
-                Object.values(data).forEach(value => {
-                    if (Array.isArray(value)) value.forEach(item => addItem(item));
-                    else if (typeof value === 'object' && value.title) addItem(value);
-                    else if (typeof value === 'object') {
-                        Object.values(value).forEach(subItem => addItem(subItem));
-                    }
-                });
-            }
-        });
-        return flattened;
-    }, []);
-
-    useEffect(() => {
-        if (searchQuery.trim() === '') {
-            setSearchResults([]);
-            return;
-        }
-        const lowercasedQuery = searchQuery.toLowerCase();
-        const results = allMaterials.filter(item =>
-            item.title.toLowerCase().includes(lowercasedQuery) ||
-            (item.description && item.description.toLowerCase().includes(lowercasedQuery))
-        );
-        setSearchResults(results);
-    }, [searchQuery, allMaterials]);
-    
-    // --- Handlers ---
-    const handleMenuClick = (command, productId = null) => {
+    const handleMenuClick = (command) => {
         setSearchQuery('');
         if (command === 'chat') {
-            if (chatStatus === 'offline') updateUserChatStatus('online');
             setIsChatVisible(!isChatVisible);
         } else {
             setActiveCommand(command);
-            setSelectedProductId(productId);
+            if (command === 'produtos') setProductView('showcase');
         }
         setIsSidebarOpen(false);
     };
-    
-    const handleLogout = async () => { setIsLoggingOut(true); await logout(); };
-    const handleOpenShare = (material) => { setSelectedMaterial(material); setShareModalOpen(true); };
-    const handleCloseShare = () => setShareModalOpen(false);
 
-    // --- Renderização ---
-    const SearchResultsComponent = () => (
-        <MaterialViewer title={`Resultados para "${searchQuery}"`}>
-            {searchResults.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {searchResults.map((item, index) => <MaterialCard key={item.id || index} item={item} onShare={handleOpenShare} />)}
-                </div>
-            ) : (
-                <p className="text-center text-slate-500 dark:text-slate-400">Nenhum material encontrado.</p>
-            )}
-        </MaterialViewer>
-    );
+    const handleProductSelect = (productId) => {
+        setSelectedProductId(productId);
+        setProductView('detail');
+    };
+
+    const handleOpenShare = (material) => {
+        setSelectedMaterial(material);
+        setShareModalOpen(true);
+    };
 
     const renderContent = () => {
-        if (searchQuery.trim() !== '') return <SearchResultsComponent />;
-        
+        if (searchQuery) return <Materials.SearchResults results={searchResults} onProductClick={handleProductSelect} onShare={handleOpenShare} />;
+        if (activeCommand === 'produtos') {
+            if (productView === 'showcase') return <Materials.ProductShowcase onProductSelect={handleProductSelect} />;
+            if (productView === 'detail') return <Materials.ProductBrowser initialProductId={selectedProductId} onShare={handleOpenShare} onBack={() => setProductView('showcase')} />;
+        }
         const componentMap = {
             'inicio': <WelcomeScreen />, 'convite': <InviteGenerator />, 'prospects': <ProspectsList />,
-            'apresentacao': <OpportunityPresenter onShare={handleOpenShare} />,
-            'bonusconstrutor': <BonusBuilderPresenter onShare={handleOpenShare} />,
-            'fabrica4life': <FactoryPresenter onShare={handleOpenShare} />,
-            'fatorestransferencia': <TransferFactorPresenter onShare={handleOpenShare} />,
-            'fidelidade': <LoyaltyPresenter onShare={handleOpenShare} />,
-            'folheteria': <BrochurePresenter onShare={handleOpenShare} />,
-            'artes': <ArtsPresenter onShare={handleOpenShare} />,
-            'tabelas': <TablesPresenter />, 'glossario': <GlossaryPresenter />, 'ranking': <RankingPresenter />,
-            'canais': <ChannelsPresenter />,
-            'produtos': <ProductBrowser initialProductId={selectedProductId} onShare={handleOpenShare} onBack={() => handleMenuClick('inicio')} />,
+            'apresentacao': <Materials.OpportunityPresenter onShare={handleOpenShare} />,
+            'bonusconstrutor': <Materials.BonusBuilderPresenter onShare={handleOpenShare} />,
+            'fabrica4life': <Materials.FactoryPresenter onShare={handleOpenShare} />,
+            'fatorestransferencia': <Materials.TransferFactorPresenter onShare={handleOpenShare} />,
+            'fidelidade': <Materials.LoyaltyPresenter onShare={handleOpenShare} />,
+            'folheteria': <Materials.BrochurePresenter onShare={handleOpenShare} />,
+            'artes': <Materials.ArtsPresenter onShare={handleOpenShare} />,
+            'tabelas': <Materials.TablesPresenter />, 'glossario': <Materials.GlossaryPresenter />, 'ranking': <Materials.RankingPresenter />,
+            'canais': <Materials.ChannelsPresenter />,
         };
-
-        const ActiveComponent = componentMap[activeCommand];
-        return ActiveComponent || <MaterialViewer title={commandMap[activeCommand]?.title} />;
+        return componentMap[activeCommand] || <Materials.MaterialViewer title={materialsMap.commandMap[activeCommand]?.title} />;
     };
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-200">
-            {isSidebarOpen && (<div className="fixed inset-0 bg-black opacity-50 z-30 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>)}
-            <aside className={`fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-80 p-6 h-screen shadow-2xl flex flex-col transform transition-transform duration-300 z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Plataforma</h1>
+            {isSidebarOpen && <div className="fixed inset-0 bg-black opacity-50 z-30 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>}
+            
+            <aside className={`fixed inset-y-0 left-0 bg-white dark:bg-slate-800 p-4 shadow-2xl flex flex-col transform transition-all duration-300 ease-in-out z-40 
+                ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+                md:translate-x-0 ${isSidebarCollapsed ? 'md:w-24' : 'md:w-80'}`}>
+                
+                {/* Cabeçalho do Sidebar */}
+                <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} mb-6 px-2`}>
+                    <div className={`flex items-center gap-3 ${isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'} transition-all duration-300`}>
+                       <Icons.LogoIcon />
+                       <h1 className="text-xl font-bold text-slate-900 dark:text-white whitespace-nowrap">Plataforma</h1>
+                    </div>
+                     <div className={`flex items-center gap-3 ${isSidebarCollapsed ? 'w-auto opacity-100' : 'w-0 opacity-0'} transition-all duration-300`}>
+                       <Icons.LogoIcon />
+                    </div>
                     <button onClick={() => setIsSidebarOpen(false)} className="md:hidden"><Icons.CloseIcon /></button>
                 </div>
-                <div className="flex items-center justify-between mb-6 border-b border-slate-200 dark:border-slate-700 pb-4">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Bem-vindo, {user?.name}!</p>
+
+                {/* Informações do Utilizador */}
+                <div className={`border-t border-b border-slate-200 dark:border-slate-700 py-3 mb-6 flex items-center justify-between ${isSidebarCollapsed ? 'flex-col gap-2' : ''}`}>
+                    <p className={`text-sm text-slate-500 dark:text-slate-400 truncate ${isSidebarCollapsed ? 'hidden' : ''}`}>
+                        Bem-vindo, {user?.name}!
+                    </p>
                     <div className="flex items-center gap-2">
                         <ThemeSwitcher />
-                        <button onClick={handleLogout} disabled={isLoggingOut} title="Sair da Conta" className="p-2 rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-70">{isLoggingOut ? <div className="loader h-5 w-5"></div> : <Icons.LogoutIcon />}</button>
+                        <button onClick={logout} title="Sair da Conta" className="p-2 rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50">
+                            <Icons.LogoutIcon />
+                        </button>
                     </div>
                 </div>
-                <nav className="flex-grow space-y-6 overflow-y-auto -mr-3 pr-3">
-                    {Object.entries(menuItems).map(([category, commands]) => (
+
+                {/* Navegação */}
+                <nav className="flex-grow space-y-4 overflow-y-auto">
+                    {Object.entries(materialsMap.menuItems).map(([category, commands]) => (
                         <div key={category}>
-                            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 px-4">{category}</h3>
+                             <h3 className={`text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 px-4 ${isSidebarCollapsed ? 'text-center' : ''}`}>
+                                {isSidebarCollapsed ? category.substring(0, 3) : category}
+                            </h3>
                             <ul className="space-y-1">
-                                {commands.map(command => command === 'produtos' ? (
-                                    <li key={command}>
-                                        <details className="group/submenu">
-                                            <summary className={`w-full flex items-center justify-between gap-4 px-4 py-2.5 rounded-lg cursor-pointer list-none ${activeCommand === command ? 'bg-blue-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
-                                                <div className="flex items-center gap-4"><span className="w-6 h-6">{commandMap[command].icon}</span><span>{commandMap[command].title}</span></div>
-                                                <svg className="w-4 h-4 transform group-open/submenu:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-                                            </summary>
-                                            <ul className="pl-6 mt-2 border-l-2 border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto">
-                                                {materialsMap.individualProducts.map(p => (
-                                                    <li key={p.id}><button onClick={() => handleMenuClick('produtos', p.id)} className={`w-full text-left px-4 py-2 rounded-lg text-sm flex items-center gap-3 ${selectedProductId === p.id ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}><Image src={p.image} alt={p.name} width={24} height={24} className="rounded-full bg-slate-200 object-contain" /><span>{p.name}</span></button></li>
-                                                ))}
-                                            </ul>
-                                        </details>
-                                    </li>
-                                ) : (
-                                    <li key={command}><button onClick={() => handleMenuClick(command)} className={`w-full text-left flex items-center gap-4 px-4 py-2.5 rounded-lg ${activeCommand === command ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}><span className="w-6 h-6">{commandMap[command].icon}</span><span>{commandMap[command].title}</span></button></li>
+                                {commands.map(command => (
+                                    <div key={command} className="group">
+                                        <SidebarItem 
+                                            command={command}
+                                            activeCommand={activeCommand}
+                                            onMenuClick={handleMenuClick}
+                                            isCollapsed={isSidebarCollapsed}
+                                        />
+                                    </div>
                                 ))}
                             </ul>
                         </div>
                     ))}
                 </nav>
+
+                {/* Botão de Minimizar */}
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="w-full flex items-center gap-4 px-4 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                        {isSidebarCollapsed ? <Icons.ChevronsRightIcon/> : <Icons.ChevronsLeftIcon />}
+                        <span className={isSidebarCollapsed ? 'hidden' : ''}>Minimizar Menu</span>
+                    </button>
+                </div>
             </aside>
-            <main className="md:ml-80 h-screen flex flex-col">
-                 <header className="md:hidden flex justify-between items-center p-4 sticky top-0 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-700">
-                    <h1 className="text-xl font-bold">{activeCommand === 'produtos' && selectedProductId ? materialsMap.productData[selectedProductId]?.name : commandMap[activeCommand]?.title}</h1>
+            
+            <main className={`h-screen flex flex-col transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'md:ml-24' : 'md:ml-80'}`}>
+                <header className="md:hidden flex justify-between items-center p-4 sticky top-0 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm z-10 border-b">
+                    <h1 className="text-xl font-bold">{materialsMap.commandMap[activeCommand]?.title}</h1>
                     <button onClick={() => setIsSidebarOpen(true)} className="p-2"><Icons.MenuIcon /></button>
-                 </header>
-                 <div className="flex-grow p-6 md:p-10 overflow-y-auto">
-                     <div className="relative mb-6">
-                         <input 
-                            type="text" 
-                            placeholder="Pesquisar em todos os materiais..." 
-                            className="form-input w-full p-3 pl-10 bg-slate-100 dark:bg-indigo-800 border-slate-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-blue-500" 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                         />
-                         <Icons.SearchIcon />
-                     </div>
-                     {renderContent()}
-                 </div>
+                </header>
+                <div className="flex-grow p-6 md:p-10 overflow-y-auto">
+                    <div className="relative mb-6">
+                        <input type="text" placeholder="Pesquisar em todos os materiais..." className="form-input w-full p-3 pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                        <Icons.SearchIcon />
+                    </div>
+                    {renderContent()}
+                </div>
             </main>
+
             {isChatVisible && <GlobalChat isVisible={isChatVisible} onClose={() => setIsChatVisible(false)} />}
-            {shareModalOpen && selectedMaterial && <ShareModal material={selectedMaterial} onClose={handleCloseShare} />}
+            {shareModalOpen && <Materials.ShareModal material={selectedMaterial} onClose={() => setShareModalOpen(false)} />}
         </div>
     );
 };
