@@ -309,18 +309,35 @@ const TeleprompterModal = ({ text, onClose }) => {
                         <div className="bg-slate-800 p-3 rounded-lg space-y-3">
                             <h4 className="font-bold text-white text-base">Painel de Controlo</h4>
                             
-                            {/* Controlo de Rolagem */}
-                            <div className="flex items-center justify-center gap-4 border-b border-slate-700 pb-3">
-                                <button onClick={() => setIsScrolling(p => !p)} className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition" title={isScrolling ? "Pausar Rolagem" : "Iniciar Rolagem"}>
+                            {/* Controlos de Rolagem e Gravação */}
+                            <div className="flex items-center justify-center gap-3 border-b border-slate-700 pb-3">
+                                <button onClick={() => setIsScrolling(p => !p)} className="p-2 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title={isScrolling ? "Pausar Rolagem" : "Iniciar Rolagem"}>
                                     {isScrolling ? <Icons.PauseIcon /> : <Icons.PlayIcon />}
                                 </button>
                                 <button onClick={handleResetScroll} className="p-2 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title="Reiniciar Rolagem">
                                     <Icons.RewindIcon />
                                 </button>
+                                
+                                <div className="h-6 w-px bg-slate-700"></div>
+
+                                {!isRecording ? (
+                                    <>
+                                        <button onClick={() => startRecording('audio')} className="p-3 bg-slate-700 text-white rounded-full hover:bg-blue-500 transition" title="Gravar Áudio">
+                                            <Icons.SoundOnIcon />
+                                        </button>
+                                        <button onClick={() => startRecording('video')} className="p-3 bg-red-600 text-white rounded-full hover:bg-red-500 transition animate-pulse" title="Gravar Vídeo">
+                                            <Icons.RecIcon />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button onClick={stopRecording} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title="Parar Gravação">
+                                        <Icons.StopIcon />
+                                    </button>
+                                )}
                             </div>
                             
                             {/* Ajustes */}
-                            <div className="space-y-2 border-b border-slate-700 pb-3">
+                            <div className="space-y-2">
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
                                     <input type="range" min="0.5" max="5" step="0.1" value={scrollSpeed} onChange={(e) => setScrollSpeed(parseFloat(e.target.value))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
@@ -333,24 +350,6 @@ const TeleprompterModal = ({ text, onClose }) => {
                                     <label htmlFor="mirror-toggle" className="text-xs font-medium text-slate-300 flex items-center gap-2 cursor-pointer"><Icons.FlipHorizontalIcon /> Espelhar Texto</label>
                                     <input type="checkbox" id="mirror-toggle" checked={isMirrored} onChange={() => setIsMirrored(!isMirrored)} className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded focus:ring-blue-500"/>
                                 </div>
-                            </div>
-                            
-                            {/* Controlo de Gravação */}
-                            <div className="flex justify-center items-center gap-4 pt-2">
-                                {!isRecording ? (
-                                    <>
-                                        <button onClick={() => startRecording('audio')} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title="Gravar Áudio">
-                                            <Icons.SoundOnIcon />
-                                        </button>
-                                        <button onClick={() => startRecording('video')} className="p-3 bg-red-600 text-white rounded-full hover:bg-red-500 transition animate-pulse" title="Gravar Vídeo">
-                                            <Icons.RecIcon />
-                                        </button>
-                                    </>
-                                ) : (
-                                    <button onClick={stopRecording} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title="Parar Gravação">
-                                        <Icons.StopIcon />
-                                    </button>
-                                )}
                             </div>
                         </div>
                         
@@ -496,4 +495,3 @@ const InviteGenerator = ({ onShare }) => {
 };
 
 export default InviteGenerator;
-
