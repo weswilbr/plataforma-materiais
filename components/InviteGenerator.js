@@ -1,29 +1,119 @@
 // NOME DO ARQUIVO: components/InviteGenerator.js
-// ATUALIZAÇÃO: A interface do TeleprompterModal foi redesenhada para sobrepor
-// o texto do roteiro diretamente na visualização da câmera, criando uma
-// experiência de teleprompter mais autêntica.
+// ATUALIZAÇÃO: O TeleprompterModal agora inclui uma galeria para salvar, listar,
+// apagar e partilhar gravações diretamente para a lista de prospectos via WhatsApp.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Icons from './icons'; // Importa todos os ícones de um só lugar
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../firebase';
+import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+
+// --- Componente para Selecionar Prospecto ---
+const ProspectSelectModal = ({ onSelect, onClose }) => {
+    const { user } = useAuth();
+    const [prospects, setProspects] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) return;
+        const q = query(collection(db, `users/${user.uid}/prospects`), orderBy('createdAt', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setProspects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [user]);
+
+    const filteredProspects = prospects.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-lg shadow-2xl w-full max-w-md flex flex-col max-h-[80vh]">
+                <header className="p-4 border-b border-slate-700">
+                    <h3 className="text-lg font-bold text-white">Enviar para Prospecto</h3>
+                    <input 
+                        type="text"
+                        placeholder="Pesquisar prospecto..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-slate-700 text-white p-2 rounded-lg mt-2 border border-slate-600 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                </header>
+                <main className="p-4 overflow-y-auto">
+                    {loading ? (
+                        <p className="text-slate-400 text-center">A carregar prospectos...</p>
+                    ) : (
+                        <ul className="space-y-2">
+                            {filteredProspects.map(prospect => (
+                                <li key={prospect.id}>
+                                    <button onClick={() => onSelect(prospect)} className="w-full text-left p-3 bg-slate-700 hover:bg-slate-600 rounded-lg flex justify-between items-center transition">
+                                        <span className="font-medium text-white">{prospect.name}</span>
+                                        <span className="text-sm text-slate-400">{prospect.whatsapp}</span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </main>
+                <footer className="p-4 border-t border-slate-700">
+                    <button onClick={onClose} className="w-full p-2 bg-slate-600 hover:bg-slate-500 text-white font-semibold rounded-lg">Cancelar</button>
+                </footer>
+            </div>
+        </div>
+    );
+};
 
 // --- Componente Teleprompter ---
 const TeleprompterModal = ({ text, onClose }) => {
     // --- Estados para Gravação ---
     const [isRecording, setIsRecording] = useState(false);
     const [recordingType, setRecordingType] = useState(null);
-    const [mediaUrl, setMediaUrl] = useState(null);
     const [error, setError] = useState('');
     const mediaRecorderRef = useRef(null);
     const videoRef = useRef(null);
     const streamRef = useRef(null);
+    
+    // --- Estados para Galeria ---
+    const [dbInstance, setDbInstance] = useState(null);
+    const [savedRecordings, setSavedRecordings] = useState([]);
+    const [selectedRecording, setSelectedRecording] = useState(null);
+    const [isProspectModalOpen, setIsProspectModalOpen] = useState(false);
 
     // --- Estados para Teleprompter ---
     const [isScrolling, setIsScrolling] = useState(false);
-    const [scrollSpeed, setScrollSpeed] = useState(1); // Velocidade base
-    const [fontSize, setFontSize] = useState(48); // Tamanho da fonte em pixels
+    const [scrollSpeed, setScrollSpeed] = useState(1);
+    const [fontSize, setFontSize] = useState(48);
     const [isMirrored, setIsMirrored] = useState(false);
     const textContainerRef = useRef(null);
     const animationFrameRef = useRef(null);
+
+    // --- Inicialização do IndexedDB ---
+    useEffect(() => {
+        const request = indexedDB.open("teleprompterDB", 1);
+        request.onerror = (event) => console.error("Erro no IndexedDB:", event);
+        request.onsuccess = (event) => setDbInstance(event.target.result);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('recordings')) {
+                db.createObjectStore('recordings', { keyPath: 'id', autoIncrement: true });
+            }
+        };
+    }, []);
+
+    const fetchRecordings = useCallback(() => {
+        if (!dbInstance) return;
+        const transaction = dbInstance.transaction(['recordings'], 'readonly');
+        const store = transaction.objectStore('recordings');
+        const getAllRequest = store.getAll();
+        getAllRequest.onsuccess = () => setSavedRecordings(getAllRequest.result.reverse());
+    }, [dbInstance]);
+
+    useEffect(() => {
+        fetchRecordings();
+    }, [fetchRecordings]);
 
     // --- Lógica de Rolagem ---
     const scrollText = useCallback(() => {
@@ -45,49 +135,83 @@ const TeleprompterModal = ({ text, onClose }) => {
     const handleResetScroll = () => {
         if (textContainerRef.current) textContainerRef.current.scrollTop = 0;
     };
+    
+    // --- Lógica de Gravação e Galeria ---
+    const saveRecording = (blob, type) => {
+        if (!dbInstance) return;
+        const transaction = dbInstance.transaction(['recordings'], 'readwrite');
+        const store = transaction.objectStore('recordings');
+        const recording = {
+            blob,
+            type,
+            name: `Gravação-${new Date().toLocaleString('pt-BR')}.${type === 'video' ? 'webm' : 'ogg'}`,
+            timestamp: new Date()
+        };
+        const request = store.add(recording);
+        request.onsuccess = () => fetchRecordings();
+        request.onerror = (event) => console.error("Erro ao salvar gravação:", event);
+    };
 
-    // --- Lógica de Gravação ---
+    const deleteRecording = (id) => {
+        if (!dbInstance) return;
+        const transaction = dbInstance.transaction(['recordings'], 'readwrite');
+        const store = transaction.objectStore('recordings');
+        const request = store.delete(id);
+        request.onsuccess = () => fetchRecordings();
+    };
+
+    const deleteAllRecordings = () => {
+        if (!dbInstance || !confirm("Tem a certeza que quer apagar TODAS as gravações?")) return;
+        const transaction = dbInstance.transaction(['recordings'], 'readwrite');
+        const store = transaction.objectStore('recordings');
+        const request = store.clear();
+        request.onsuccess = () => fetchRecordings();
+    };
+    
     const startRecording = async (type) => {
         setError('');
-        setMediaUrl(null);
         if (isRecording) return;
-
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
             streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
+            if (videoRef.current) videoRef.current.srcObject = stream;
             
             const recorder = new MediaRecorder(stream);
             mediaRecorderRef.current = recorder;
             const chunks = [];
-            recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
+            recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
             recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: type === 'video' ? 'video/webm' : 'audio/webm' });
-                const url = URL.createObjectURL(blob);
-                setMediaUrl(url);
+                const blob = new Blob(chunks, { type: type === 'video' ? 'video/webm' : 'audio/ogg' });
+                saveRecording(blob, type);
             };
             recorder.start();
             setIsRecording(true);
             setRecordingType(type);
         } catch (err) {
-            console.error("Erro ao aceder à mídia:", err);
-            setError('Não foi possível aceder à câmera/microfone. Verifique as permissões do navegador.');
+            setError('Não foi possível aceder à câmera/microfone. Verifique as permissões.');
         }
     };
 
     const stopRecording = () => {
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-            }
+            streamRef.current?.getTracks().forEach(track => track.stop());
             setIsRecording(false);
-            if (videoRef.current) {
-                videoRef.current.srcObject = null;
-            }
+            if (videoRef.current) videoRef.current.srcObject = null;
         }
+    };
+
+    const handleSendToProspect = (prospect) => {
+        const url = URL.createObjectURL(selectedRecording.blob);
+        alert(`Para enviar para ${prospect.name}, por favor, baixe o ficheiro e anexe-o na conversa do WhatsApp que será aberta.`);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = selectedRecording.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.open(`https://wa.me/${prospect.whatsapp.replace(/\D/g, '')}`, '_blank');
+        setIsProspectModalOpen(false);
     };
 
     return (
@@ -101,70 +225,78 @@ const TeleprompterModal = ({ text, onClose }) => {
                 <main className="flex-grow flex flex-col md:flex-row gap-4 p-4 overflow-hidden">
                     {/* Coluna Principal: Vídeo com sobreposição de texto */}
                     <div className="flex-1 flex flex-col bg-black rounded-lg overflow-hidden relative">
-                        {/* Camada do Vídeo (fundo) */}
                         <video ref={videoRef} autoPlay muted className="absolute inset-0 w-full h-full object-cover"></video>
-                        {!isRecording && !mediaUrl && (
+                        {!isRecording && (
                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <span className="text-slate-400 text-lg bg-black/50 p-4 rounded-lg">A sua câmera aparecerá aqui</span>
                              </div>
                         )}
-
-                        {/* Camada do Texto (sobreposição) */}
                         <div className="absolute inset-0 flex flex-col pointer-events-none">
                             <div ref={textContainerRef} className="w-full max-w-4xl mx-auto p-10 overflow-y-scroll scrollbar-hide flex-grow relative pointer-events-auto">
                                 <div className="absolute top-1/4 left-0 right-0 h-px bg-red-500/70 z-10 pointer-events-none"></div>
-                                <p 
-                                    className={`text-white text-center transition-transform duration-300 backdrop-blur-sm bg-black/30 p-4 rounded-lg`}
-                                    style={{ fontSize: `${fontSize}px`, lineHeight: 1.5, transform: isMirrored ? 'scaleX(-1)' : 'scaleX(1)' }}
-                                >
+                                <p style={{ fontSize: `${fontSize}px`, lineHeight: 1.5, transform: isMirrored ? 'scaleX(-1)' : 'scaleX(1)' }}
+                                   className={`text-white text-center transition-transform duration-300 backdrop-blur-sm bg-black/30 p-4 rounded-lg`}>
                                     {text}
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Coluna de Controlos */}
-                    <div className="w-full md:w-80 flex flex-col gap-4 flex-shrink-0">
+                    {/* Coluna de Controlos e Galeria */}
+                    <div className="w-full md:w-96 flex flex-col gap-4 flex-shrink-0">
                         <div className="bg-slate-800 p-4 rounded-lg space-y-4">
                             <h4 className="font-bold text-white">Controlos do Roteiro</h4>
                             <div className="flex items-center justify-center gap-4">
-                                <button onClick={() => setIsScrolling(prev => !prev)} className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition">
-                                    {isScrolling ? <Icons.PauseIcon /> : <Icons.PlayIcon />}
-                                </button>
-                                <button onClick={handleResetScroll} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition"><Icons.RewindIcon /></button>
-                            </div>
-                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
-                                <input type="range" min="0.5" max="5" step="0.1" value={scrollSpeed} onChange={(e) => setScrollSpeed(parseFloat(e.target.value))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
-                            </div>
-                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-300 flex items-center justify-between">Tamanho da Fonte: <span>{fontSize}px</span></label>
-                                <input type="range" min="24" max="96" step="2" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value, 10))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
-                            </div>
-                             <div className="flex items-center justify-between">
-                                 <label htmlFor="mirror-toggle" className="text-sm font-medium text-slate-300 flex items-center gap-2 cursor-pointer"><Icons.FlipHorizontalIcon /> Espelhar Texto</label>
-                                 <input type="checkbox" id="mirror-toggle" checked={isMirrored} onChange={() => setIsMirrored(!isMirrored)} className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded focus:ring-blue-500"/>
+                                <button onClick={() => setIsScrolling(p => !p)} className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-500"><Icons.PlayIcon /></button>
+                                <button onClick={handleResetScroll} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600"><Icons.RewindIcon /></button>
                             </div>
                         </div>
                         <div className="bg-slate-800 p-4 rounded-lg flex justify-center gap-4">
-                            {!isRecording ? (
+                           {!isRecording ? (
                                 <>
-                                    <button onClick={() => startRecording('audio')} className="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-blue-700 flex items-center gap-2"><Icons.SoundOnIcon/> Áudio</button>
-                                    <button onClick={() => startRecording('video')} className="bg-red-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-red-700 flex items-center gap-2"><Icons.VideoIcon/> Vídeo</button>
+                                    <button onClick={() => startRecording('audio')} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2"><Icons.SoundOnIcon/> Áudio</button>
+                                    <button onClick={() => startRecording('video')} className="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 flex items-center gap-2"><Icons.VideoIcon/> Vídeo</button>
                                 </>
                             ) : (
                                 <button onClick={stopRecording} className="bg-slate-700 text-white font-semibold py-2 px-5 rounded-lg hover:bg-slate-600">Parar Gravação</button>
                             )}
                         </div>
-                        {mediaUrl && (
-                            <div className="text-center bg-slate-800 p-4 rounded-lg">
-                                <a href={mediaUrl} download={`convite_${recordingType}.webm`} className="inline-block bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 w-full">Baixar Gravação</a>
+
+                        {/* Galeria de Gravações */}
+                        <div className="bg-slate-800 p-4 rounded-lg flex flex-col flex-grow min-h-0">
+                            <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-bold text-white">Minhas Gravações</h4>
+                                <button onClick={deleteAllRecordings} className="text-red-400 hover:text-red-300 text-xs font-semibold">REINICIAR</button>
                             </div>
-                        )}
-                         {error && <p className="text-red-400 text-center text-sm">{error}</p>}
+                            <div className="flex-grow overflow-y-auto space-y-2 pr-2">
+                                {savedRecordings.length > 0 ? savedRecordings.map(rec => {
+                                    const url = URL.createObjectURL(rec.blob);
+                                    return (
+                                        <div key={rec.id} className="bg-slate-700 p-3 rounded-lg flex items-center justify-between">
+                                            <div>
+                                                <p className="text-white font-medium text-sm">{rec.name}</p>
+                                                <p className="text-xs text-slate-400">{rec.timestamp.toLocaleDateString()}</p>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <a href={url} download={rec.name} className="p-2 text-slate-300 hover:text-white"><Icons.DownloadIcon /></a>
+                                                <button onClick={() => { setSelectedRecording(rec); setIsProspectModalOpen(true); }} className="p-2 text-slate-300 hover:text-white"><Icons.SendIcon /></button>
+                                                <button onClick={() => deleteRecording(rec.id)} className="p-2 text-red-400 hover:text-red-300"><Icons.TrashIcon /></button>
+                                            </div>
+                                        </div>
+                                    );
+                                }) : <p className="text-slate-500 text-sm text-center pt-8">Nenhuma gravação encontrada.</p>}
+                            </div>
+                        </div>
+                         {error && <p className="text-red-400 text-center text-sm p-2 bg-red-900/50 rounded-lg">{error}</p>}
                     </div>
                 </main>
             </div>
+            {isProspectModalOpen && (
+                <ProspectSelectModal 
+                    onClose={() => setIsProspectModalOpen(false)}
+                    onSelect={handleSendToProspect}
+                />
+            )}
         </div>
     );
 };
