@@ -26,11 +26,11 @@ const PreviewModal = ({ preview, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="relative w-full h-full max-w-4xl max-h-4xl" onClick={(e) => e.stopPropagation()}>
+            <div className="relative w-full max-w-4xl aspect-video" onClick={(e) => e.stopPropagation()}>
                 {preview.type === 'video' ? (
                     <video ref={playerRef} src={preview.url} controls autoPlay className="w-full h-full rounded-lg"></video>
                 ) : (
-                    <div className="w-full h-full flex items-center">
+                    <div className="w-full flex items-center">
                         <audio src={preview.url} controls autoPlay className="w-full"></audio>
                     </div>
                 )}
@@ -306,30 +306,30 @@ const TeleprompterModal = ({ text, onClose }) => {
                     <div className="w-full md:w-80 flex flex-col gap-2 md:gap-4 flex-shrink-0 md:max-h-full overflow-y-auto">
                         
                         {/* Controlos do Roteiro */}
-                        <div className="bg-slate-800 p-3 md:p-4 rounded-lg space-y-3 md:space-y-4">
+                        <div className="bg-slate-800 p-3 rounded-lg space-y-2">
                             <h4 className="font-bold text-white text-base">Controlos do Roteiro</h4>
                             <div className="flex items-center justify-center gap-4">
-                                <button onClick={() => setIsScrolling(p => !p)} className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition">
+                                <button onClick={() => setIsScrolling(p => !p)} className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition">
                                     {isScrolling ? <Icons.PauseIcon /> : <Icons.PlayIcon />}
                                 </button>
-                                <button onClick={handleResetScroll} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition"><Icons.RewindIcon /></button>
+                                <button onClick={handleResetScroll} className="p-2 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition"><Icons.RewindIcon /></button>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs md:text-sm font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
                                 <input type="range" min="0.5" max="5" step="0.1" value={scrollSpeed} onChange={(e) => setScrollSpeed(parseFloat(e.target.value))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs md:text-sm font-medium text-slate-300 flex items-center justify-between">Tamanho da Fonte: <span>{fontSize}px</span></label>
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-300 flex items-center justify-between">Tamanho da Fonte: <span>{fontSize}px</span></label>
                                 <input type="range" min="20" max="80" step="2" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value, 10))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
                             </div>
                             <div className="flex items-center justify-between">
-                                <label htmlFor="mirror-toggle" className="text-xs md:text-sm font-medium text-slate-300 flex items-center gap-2 cursor-pointer"><Icons.FlipHorizontalIcon /> Espelhar Texto</label>
+                                <label htmlFor="mirror-toggle" className="text-xs font-medium text-slate-300 flex items-center gap-2 cursor-pointer"><Icons.FlipHorizontalIcon /> Espelhar Texto</label>
                                 <input type="checkbox" id="mirror-toggle" checked={isMirrored} onChange={() => setIsMirrored(!isMirrored)} className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded focus:ring-blue-500"/>
                             </div>
                         </div>
 
                         {/* Controlos de Gravação */}
-                        <div className="bg-slate-800 p-3 md:p-4 rounded-lg flex justify-center gap-4">
+                        <div className="bg-slate-800 p-3 rounded-lg flex justify-center gap-4">
                            {!isRecording ? (
                                 <>
                                     <button onClick={() => startRecording('audio')} className="bg-blue-600 text-white font-semibold py-2 px-3 text-sm rounded-lg hover:bg-blue-700 flex items-center gap-2"><Icons.SoundOnIcon/> Áudio</button>
@@ -341,7 +341,7 @@ const TeleprompterModal = ({ text, onClose }) => {
                         </div>
                         
                         {/* Galeria de Gravações */}
-                        <div className="bg-slate-800 p-3 md:p-4 rounded-lg flex flex-col flex-grow min-h-0">
+                        <div className="bg-slate-800 p-3 rounded-lg flex flex-col flex-grow min-h-0">
                             <div className="flex justify-between items-center mb-2">
                                 <h4 className="font-bold text-white text-base">Minhas Gravações</h4>
                                 <button onClick={deleteAllRecordings} className="text-red-400 hover:text-red-300 text-xs font-semibold">REINICIAR</button>
