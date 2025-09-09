@@ -1,6 +1,6 @@
 // NOME DO ARQUIVO: components/InviteGenerator.js
-// ATUALIZAÇÃO: A interface do teleprompter foi reestruturada com um painel de
-// controlo unificado no rodapé (para mobile) e uma galeria de gravações numa janela separada.
+// ATUALIZAÇÃO: Adicionada contagem decrescente antes de gravar e corrigido o
+// problema de reprodução ao reestruturar a abertura das janelas (modals).
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Icons from './icons'; // Importa todos os ícones de um só lugar
@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 
-// --- Ícone para a nova funcionalidade ---
+// --- Ícones para novas funcionalidades ---
 const FullscreenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>;
 const GalleryIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="3" x2="21" y1="15" y2="15"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/></svg>;
 
@@ -144,22 +144,15 @@ const ProspectSelectModal = ({ onSelect, onClose }) => {
 };
 
 // --- Componente Teleprompter ---
-const TeleprompterModal = ({ text, onClose }) => {
-    // --- Estados para Gravação ---
+const TeleprompterModal = ({ text, onClose, onOpenPreview, onOpenGallery, onOpenProspects }) => {
+    // --- Estados para Gravação e Contagem ---
     const [isRecording, setIsRecording] = useState(false);
-    const [recordingType, setRecordingType] = useState(null);
+    const [countdown, setCountdown] = useState(0);
     const [error, setError] = useState('');
     const mediaRecorderRef = useRef(null);
     const videoRef = useRef(null);
     const streamRef = useRef(null);
-    
-    // --- Estados para Galeria ---
-    const [dbInstance, setDbInstance] = useState(null);
-    const [savedRecordings, setSavedRecordings] = useState([]);
-    const [selectedRecording, setSelectedRecording] = useState(null);
-    const [isProspectModalOpen, setIsProspectModalOpen] = useState(false);
-    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-    const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+    const countdownIntervalRef = useRef(null);
 
     // --- Estados para Teleprompter ---
     const [isScrolling, setIsScrolling] = useState(false);
@@ -168,31 +161,6 @@ const TeleprompterModal = ({ text, onClose }) => {
     const [isMirrored, setIsMirrored] = useState(false);
     const textContainerRef = useRef(null);
     const animationFrameRef = useRef(null);
-
-    // --- Inicialização do IndexedDB ---
-    useEffect(() => {
-        const request = indexedDB.open("teleprompterDB", 1);
-        request.onerror = (event) => console.error("Erro no IndexedDB:", event);
-        request.onsuccess = (event) => setDbInstance(event.target.result);
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains('recordings')) {
-                db.createObjectStore('recordings', { keyPath: 'id', autoIncrement: true });
-            }
-        };
-    }, []);
-
-    const fetchRecordings = useCallback(() => {
-        if (!dbInstance) return;
-        const transaction = dbInstance.transaction(['recordings'], 'readonly');
-        const store = transaction.objectStore('recordings');
-        const getAllRequest = store.getAll();
-        getAllRequest.onsuccess = () => setSavedRecordings(getAllRequest.result.reverse());
-    }, [dbInstance]);
-
-    useEffect(() => {
-        fetchRecordings();
-    }, [fetchRecordings]);
 
     // --- Lógica de Rolagem ---
     const scrollText = useCallback(() => {
@@ -215,40 +183,9 @@ const TeleprompterModal = ({ text, onClose }) => {
         if (textContainerRef.current) textContainerRef.current.scrollTop = 0;
     };
     
-    // --- Lógica de Gravação e Galeria ---
-    const saveRecording = (blob, type) => {
-        if (!dbInstance) return;
-        const transaction = dbInstance.transaction(['recordings'], 'readwrite');
-        const store = transaction.objectStore('recordings');
-        const recording = {
-            blob,
-            type,
-            name: `Gravação-${new Date().toLocaleString('pt-BR').replace(/[/:]/g, '-')}.${type === 'video' ? 'webm' : 'ogg'}`,
-            timestamp: new Date()
-        };
-        store.add(recording).onsuccess = () => fetchRecordings();
-    };
-
-    const deleteRecording = (id) => {
-        if (!dbInstance) return;
-        const transaction = dbInstance.transaction(['recordings'], 'readwrite');
-        transaction.objectStore('recordings').delete(id).onsuccess = () => {
-            fetchRecordings();
-        };
-    };
-
-    const deleteAllRecordings = () => {
-        if (!dbInstance || !confirm("Tem a certeza que quer apagar TODAS as gravações?")) return;
-        const transaction = dbInstance.transaction(['recordings'], 'readwrite');
-        transaction.objectStore('recordings').clear().onsuccess = () => {
-            fetchRecordings();
-             setIsGalleryOpen(false);
-        };
-    };
-    
-    const startRecording = async (type) => {
+    // --- Lógica de Gravação ---
+    const actuallyStartRecording = async (type) => {
         setError('');
-        if (isRecording) return;
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
             streamRef.current = stream;
@@ -260,14 +197,31 @@ const TeleprompterModal = ({ text, onClose }) => {
             recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: type === 'video' ? 'video/webm' : 'audio/ogg' });
-                saveRecording(blob, type);
+                onSaveRecording(blob, type);
             };
             recorder.start();
             setIsRecording(true);
-            setRecordingType(type);
         } catch (err) {
             setError('Não foi possível aceder à câmera/microfone. Verifique as permissões.');
+            setCountdown(0);
         }
+    };
+
+    const triggerCountdown = (type) => {
+        if (isRecording) return;
+        setCountdown(3);
+        countdownIntervalRef.current = setInterval(() => {
+            setCountdown(prev => prev - 1);
+        }, 1000);
+
+        setTimeout(() => {
+            clearInterval(countdownIntervalRef.current);
+            setCountdown("VAI!");
+            setTimeout(() => {
+                setCountdown(0);
+                actuallyStartRecording(type);
+            }, 1000);
+        }, 3000);
     };
 
     const stopRecording = () => {
@@ -278,66 +232,26 @@ const TeleprompterModal = ({ text, onClose }) => {
             if (videoRef.current) videoRef.current.srcObject = null;
         }
     };
-    
-    const handlePreview = (rec) => {
-        const url = URL.createObjectURL(rec.blob);
-        setPreview({ url, type: rec.type });
-        setIsPreviewModalOpen(true);
-    };
-
-    const handleSelectForProspect = (rec) => {
-        setSelectedRecording(rec);
-        setIsProspectModalOpen(true);
-    };
-
-    const shareRecording = async (prospect, recording) => {
-        const file = new File([recording.blob], recording.name, { type: recording.blob.type });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            try {
-                await navigator.share({
-                    files: [file],
-                    title: 'Gravação de Convite',
-                    text: `Olá ${prospect.name}, segue uma mensagem para você.`,
-                });
-            } catch (error) {
-                if (error.name !== 'AbortError') console.error('Erro ao partilhar:', error);
-            }
-        } else {
-            alert(`Para enviar para ${prospect.name}, por favor, baixe o ficheiro e anexe-o na conversa do WhatsApp.`);
-            const url = URL.createObjectURL(recording.blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = recording.name;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        setIsProspectModalOpen(false);
-    };
 
     const ControlPanel = () => (
         <div className="bg-blue-950/80 backdrop-blur-sm p-3 rounded-lg space-y-3">
              <div className="flex items-center justify-around gap-2 border-b border-slate-700 pb-3">
-                {/* Controles de Rolagem */}
                 <button onClick={() => setIsScrolling(p => !p)} className="p-2 text-white" title={isScrolling ? "Pausar" : "Reproduzir"}>{isScrolling ? <Icons.PauseIcon /> : <Icons.PlayIcon />}</button>
                 <button onClick={handleResetScroll} className="p-2 text-white" title="Reiniciar"><Icons.RewindIcon /></button>
                 <div className="h-6 w-px bg-slate-700"></div>
-                {/* Controles de Gravação */}
                 {!isRecording ? (
                     <>
-                        <button onClick={() => startRecording('audio')} className="p-2 text-white" title="Gravar Áudio"><Icons.SoundOnIcon /></button>
-                        <button onClick={() => startRecording('video')} className="p-3 bg-red-600 text-white rounded-full animate-pulse" title="Gravar Vídeo"><Icons.RecIcon /></button>
+                        <button onClick={() => triggerCountdown('audio')} className="p-2 text-white" title="Gravar Áudio"><Icons.SoundOnIcon /></button>
+                        <button onClick={() => triggerCountdown('video')} className="p-3 bg-red-600 text-white rounded-full animate-pulse" title="Gravar Vídeo"><Icons.RecIcon /></button>
                     </>
                 ) : (
                     <button onClick={stopRecording} className="p-3 bg-red-800 text-white rounded-full" title="Parar Gravação"><Icons.StopIcon /></button>
                 )}
                  <div className="h-6 w-px bg-slate-700"></div>
-                 <button onClick={() => setIsGalleryOpen(true)} className="p-2 text-white relative" title="Minhas Gravações">
+                 <button onClick={onOpenGallery} className="p-2 text-white relative" title="Minhas Gravações">
                     <GalleryIcon />
-                    {savedRecordings.length > 0 && <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-blue-500 ring-2 ring-slate-900"></span>}
                 </button>
             </div>
-            {/* Ajustes */}
             <div className="space-y-2">
                 <div className="space-y-1">
                     <label className="text-xs font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
@@ -363,10 +277,19 @@ const TeleprompterModal = ({ text, onClose }) => {
                     <button onClick={onClose} className="text-slate-400 hover:text-white p-2 rounded-full">&times;</button>
                 </header>
                 <main className="flex-grow flex flex-col md:flex-row gap-4 p-2 md:p-4 overflow-hidden">
-                    {/* Coluna Principal: Vídeo e Painel Mobile */}
                     <div className="flex-1 flex flex-col bg-black rounded-lg overflow-hidden relative min-h-0">
                         <div className="flex-grow relative">
                             <video ref={videoRef} autoPlay muted className="absolute inset-0 w-full h-full object-cover"></video>
+                            {countdown > 0 && (
+                                <div className="absolute inset-0 flex items-center justify-center text-white text-9xl font-bold bg-black/50 z-20">
+                                    {countdown}
+                                </div>
+                            )}
+                             {countdown === "VAI!" && (
+                                <div className="absolute inset-0 flex items-center justify-center text-white text-9xl font-bold bg-black/50 z-20 animate-ping">
+                                    VAI!
+                                </div>
+                            )}
                             {!isRecording && !streamRef.current && (
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <span className="text-slate-400 text-center text-base bg-black/50 p-4 rounded-lg">A sua câmera aparecerá aqui</span>
@@ -384,48 +307,18 @@ const TeleprompterModal = ({ text, onClose }) => {
                         </div>
                         <div className="md:hidden p-2"><ControlPanel /></div>
                     </div>
-
-                    {/* Coluna Direita: Painel Desktop e Galeria */}
                     <div className="w-full md:w-80 flex-col gap-4 flex-shrink-0 md:max-h-full overflow-y-auto hidden md:flex">
                         <ControlPanel />
-                         <div className="bg-slate-800 p-3 rounded-lg flex flex-col flex-grow min-h-0">
-                            <details className="group">
-                                <summary className="flex justify-between items-center cursor-pointer list-none">
-                                     <h4 className="font-bold text-white text-base">Minhas Gravações ({savedRecordings.length})</h4>
-                                     <div className="flex items-center">
-                                        <button onClick={(e) => { e.stopPropagation(); deleteAllRecordings(); }} className="text-red-400 hover:text-red-300 text-xs font-semibold mr-2">REINICIAR</button>
-                                        <span className="transform transition-transform group-open:rotate-180 text-white">&#9660;</span>
-                                     </div>
-                                </summary>
-                                <div className="mt-2 pt-2 border-t border-slate-700 max-h-48 overflow-y-auto space-y-2 pr-2">
-                                    {savedRecordings.length > 0 ? savedRecordings.map(rec => (
-                                        <div key={rec.id} className="bg-slate-700 p-2 rounded-lg flex items-center justify-between">
-                                            <div className="flex-grow overflow-hidden mr-2">
-                                                <p className="text-white font-medium text-sm truncate">{rec.name}</p>
-                                            </div>
-                                            <div className="flex items-center gap-1 flex-shrink-0">
-                                                <button onClick={() => handlePreview(rec)} className="p-2 text-slate-300 hover:text-white"><Icons.PlayCircleIcon /></button>
-                                                <button onClick={() => handleSelectForProspect(rec)} className="p-2 text-slate-300 hover:text-white"><Icons.SendIcon /></button>
-                                                <button onClick={() => deleteRecording(rec.id)} className="p-2 text-red-400 hover:text-red-300"><Icons.TrashIcon /></button>
-                                            </div>
-                                        </div>
-                                    )) : <p className="text-slate-500 text-sm text-center pt-4">Nenhuma gravação encontrada.</p>}
-                                </div>
-                            </details>
-                        </div>
                          {error && <p className="text-red-400 text-center text-sm p-2 bg-red-900/50 rounded-lg">{error}</p>}
                     </div>
                 </main>
             </div>
-            {isProspectModalOpen && <ProspectSelectModal onClose={() => setIsProspectModalOpen(false)} onSelect={(prospect) => shareRecording(prospect, selectedRecording)}/>}
-            {isPreviewModalOpen && <PreviewModal preview={preview} onClose={() => setIsPreviewModalOpen(false)} />}
-            {isGalleryOpen && <RecordingsGalleryModal recordings={savedRecordings} onPreview={handlePreview} onSelectForProspect={handleSelectForProspect} onDelete={deleteRecording} onDeleteAll={deleteAllRecordings} onClose={() => setIsGalleryOpen(false)} />}
         </div>
     );
 };
 
 
-const InviteGenerator = ({ onShare }) => {
+const InviteGenerator = () => {
     const [guestName, setGuestName] = useState('');
     const [profileDescription, setProfileDescription] = useState('');
     const [tone, setTone] = useState('profissional e formal');
@@ -437,17 +330,72 @@ const InviteGenerator = ({ onShare }) => {
     const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
     const [error, setError] = useState('');
 
+     // --- Estados e Lógica da Galeria movidos para o componente pai ---
+    const [dbInstance, setDbInstance] = useState(null);
+    const [savedRecordings, setSavedRecordings] = useState([]);
+    const [selectedRecording, setSelectedRecording] = useState(null);
+    const [isProspectModalOpen, setIsProspectModalOpen] = useState(false);
+    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+    const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+    const [preview, setPreview] = useState({ url: null, type: null });
+
+    useEffect(() => {
+        const request = indexedDB.open("teleprompterDB", 1);
+        request.onerror = (event) => console.error("Erro no IndexedDB:", event);
+        request.onsuccess = (event) => setDbInstance(event.target.result);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('recordings')) {
+                db.createObjectStore('recordings', { keyPath: 'id', autoIncrement: true });
+            }
+        };
+    }, []);
+
+    const fetchRecordings = useCallback(() => {
+        if (!dbInstance) return;
+        const transaction = dbInstance.transaction(['recordings'], 'readonly');
+        const store = transaction.objectStore('recordings');
+        const getAllRequest = store.getAll();
+        getAllRequest.onsuccess = () => setSavedRecordings(getAllRequest.result.reverse());
+    }, [dbInstance]);
+
+    useEffect(() => {
+        if(isTeleprompterOpen) fetchRecordings();
+    }, [isTeleprompterOpen, fetchRecordings]);
+
+     const saveRecordingToDB = (blob, type) => {
+        if (!dbInstance) return;
+        const transaction = dbInstance.transaction(['recordings'], 'readwrite');
+        const store = transaction.objectStore('recordings');
+        const recording = { blob, type, name: `Gravação-${new Date().toLocaleString('pt-BR').replace(/[/:]/g, '-')}.${type === 'video' ? 'webm' : 'ogg'}`, timestamp: new Date() };
+        store.add(recording).onsuccess = () => fetchRecordings();
+    };
+    const deleteRecordingFromDB = (id) => {
+        if (!dbInstance) return;
+        const transaction = dbInstance.transaction(['recordings'], 'readwrite');
+        transaction.objectStore('recordings').delete(id).onsuccess = () => fetchRecordings();
+    };
+    const deleteAllRecordingsFromDB = () => {
+        if (!dbInstance || !confirm("Tem a certeza que quer apagar TODAS as gravações?")) return;
+        const transaction = dbInstance.transaction(['recordings'], 'readwrite');
+        transaction.objectStore('recordings').clear().onsuccess = () => { fetchRecordings(); setIsGalleryOpen(false); };
+    };
+    const handlePreview = (rec) => {
+        const url = URL.createObjectURL(rec.blob);
+        setPreview({ url, type: rec.type });
+        setIsPreviewModalOpen(true);
+    };
+    const handleSelectForProspect = (rec) => {
+        setSelectedRecording(rec);
+        setIsProspectModalOpen(true);
+        setIsGalleryOpen(false);
+    };
+
+
     const callApi = async (prompt) => {
         try {
-            const response = await fetch('/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt }),
-            });
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Falha na resposta da API.');
-            }
+            const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), });
+            if (!response.ok) { const errData = await response.json(); throw new Error(errData.error || 'Falha na resposta da API.'); }
             const data = await response.json();
             return data.text;
         } catch (error) {
@@ -504,6 +452,24 @@ const InviteGenerator = ({ onShare }) => {
         window.open(`https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodedText}`, '_blank');
     };
 
+    const shareRecording = async (prospect, recording) => {
+        const file = new File([recording.blob], recording.name, { type: recording.blob.type });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try { await navigator.share({ files: [file], title: 'Gravação de Convite', text: `Olá ${prospect.name}, segue uma mensagem para você.`, });
+            } catch (error) { if (error.name !== 'AbortError') console.error('Erro ao partilhar:', error); }
+        } else {
+            alert(`Para enviar para ${prospect.name}, por favor, baixe o ficheiro e anexe-o na conversa do WhatsApp.`);
+            const url = URL.createObjectURL(recording.blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = recording.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        setIsProspectModalOpen(false);
+    };
+
     return (
         <>
             <div className="bg-white dark:bg-indigo-900 p-8 rounded-lg shadow-lg space-y-8">
@@ -524,7 +490,10 @@ const InviteGenerator = ({ onShare }) => {
                     <div className="flex flex-col sm:flex-row gap-4"><input type="tel" id="whatsapp-number" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="Telefone com DDD (ex: 11987654321)" className="form-input flex-grow bg-slate-50 dark:bg-indigo-800 border-slate-300 dark:border-indigo-700 rounded-lg p-3 focus:ring-2 focus:ring-green-500" /><button onClick={handleWhatsappShare} className="bg-green-500 text-white font-semibold rounded-lg px-6 py-3 hover:bg-green-600 active:bg-green-700 transition duration-200 ease-in-out shadow-md flex items-center justify-center gap-2"><Icons.WhatsAppIcon /><span>WhatsApp</span></button></div>
                 </div>
             </div>
-            {isTeleprompterOpen && <TeleprompterModal text={generatedResponse} onClose={() => setIsTeleprompterOpen(false)} />}
+            {isTeleprompterOpen && <TeleprompterModal text={generatedResponse} onClose={() => setIsTeleprompterOpen(false)} onSaveRecording={saveRecordingToDB} onOpenGallery={() => setIsGalleryOpen(true)} />}
+            {isGalleryOpen && <RecordingsGalleryModal recordings={savedRecordings} onPreview={handlePreview} onSelectForProspect={handleSelectForProspect} onDelete={deleteRecordingFromDB} onDeleteAll={deleteAllRecordingsFromDB} onClose={() => setIsGalleryOpen(false)} />}
+            {isProspectModalOpen && <ProspectSelectModal onClose={() => setIsProspectModalOpen(false)} onSelect={(prospect) => shareRecording(prospect, selectedRecording)}/>}
+            {isPreviewModalOpen && <PreviewModal preview={preview} onClose={() => setIsPreviewModalOpen(false)} />}
         </>
     );
 };
