@@ -1,15 +1,16 @@
 // NOME DO ARQUIVO: data/index.js
-// NOVO: Este ficheiro centraliza a exportação de todos os módulos de dados,
-// simplificando as importações nos componentes.
+// NOVO: Este ficheiro centraliza a exportação de todos os dados de materiais
+// para garantir que as importações noutras partes da aplicação funcionem corretamente.
 
 import { productData, individualProducts } from './productData';
-import { positionsData, glossaryTerms } from './businessData';
-import * as content from './contentData';
+import * as contentData from './contentData';
+import * as businessData from './businessData';
 
+// Agrupa todos os dados num único objeto para exportação
 export const materialsMap = {
-    ...content,
+    ...contentData,
+    ...businessData,
     productData,
     individualProducts,
-    positionsData,
-    glossaryTerms
 };
+
