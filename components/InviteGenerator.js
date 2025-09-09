@@ -1,6 +1,6 @@
 // NOME DO ARQUIVO: components/InviteGenerator.js
-// ATUALIZAÇÃO: A interface do teleprompter foi otimizada para dispositivos móveis,
-// com controlos mais compactos e uma nova janela de pré-visualização em tela cheia.
+// ATUALIZAÇÃO: Os painéis de controlo de rolagem e de gravação foram
+// unificados num único "Painel de Controlo" para uma interface mais limpa.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Icons from './icons'; // Importa todos os ícones de um só lugar
@@ -26,7 +26,7 @@ const PreviewModal = ({ preview, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="relative w-full max-w-4xl aspect-video" onClick={(e) => e.stopPropagation()}>
+            <div className="relative w-full h-full max-w-4xl max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
                 {preview.type === 'video' ? (
                     <video ref={playerRef} src={preview.url} controls autoPlay className="w-full h-full rounded-lg"></video>
                 ) : (
@@ -303,41 +303,55 @@ const TeleprompterModal = ({ text, onClose }) => {
                         </div>
                     </div>
                     {/* Coluna de Controlos e Galeria */}
-                    <div className="w-full md:w-80 flex flex-col gap-2 md:gap-4 flex-shrink-0 md:max-h-full overflow-y-auto">
+                    <div className="w-full md:w-80 flex flex-col gap-2 flex-shrink-0 md:max-h-full overflow-y-auto">
                         
-                        {/* Controlos do Roteiro */}
-                        <div className="bg-slate-800 p-3 rounded-lg space-y-2">
-                            <h4 className="font-bold text-white text-base">Controlos do Roteiro</h4>
-                            <div className="flex items-center justify-center gap-4">
-                                <button onClick={() => setIsScrolling(p => !p)} className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition">
+                        {/* Painel de Controlo Unificado */}
+                        <div className="bg-slate-800 p-3 rounded-lg space-y-3">
+                            <h4 className="font-bold text-white text-base">Painel de Controlo</h4>
+                            
+                            {/* Controlo de Rolagem */}
+                            <div className="flex items-center justify-center gap-4 border-b border-slate-700 pb-3">
+                                <button onClick={() => setIsScrolling(p => !p)} className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition" title={isScrolling ? "Pausar Rolagem" : "Iniciar Rolagem"}>
                                     {isScrolling ? <Icons.PauseIcon /> : <Icons.PlayIcon />}
                                 </button>
-                                <button onClick={handleResetScroll} className="p-2 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition"><Icons.RewindIcon /></button>
+                                <button onClick={handleResetScroll} className="p-2 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title="Reiniciar Rolagem">
+                                    <Icons.RewindIcon />
+                                </button>
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
-                                <input type="range" min="0.5" max="5" step="0.1" value={scrollSpeed} onChange={(e) => setScrollSpeed(parseFloat(e.target.value))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
+                            
+                            {/* Ajustes */}
+                            <div className="space-y-2 border-b border-slate-700 pb-3">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
+                                    <input type="range" min="0.5" max="5" step="0.1" value={scrollSpeed} onChange={(e) => setScrollSpeed(parseFloat(e.target.value))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-300 flex items-center justify-between">Tamanho da Fonte: <span>{fontSize}px</span></label>
+                                    <input type="range" min="20" max="80" step="2" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value, 10))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
+                                </div>
+                                <div className="flex items-center justify-between pt-1">
+                                    <label htmlFor="mirror-toggle" className="text-xs font-medium text-slate-300 flex items-center gap-2 cursor-pointer"><Icons.FlipHorizontalIcon /> Espelhar Texto</label>
+                                    <input type="checkbox" id="mirror-toggle" checked={isMirrored} onChange={() => setIsMirrored(!isMirrored)} className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded focus:ring-blue-500"/>
+                                </div>
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-300 flex items-center justify-between">Tamanho da Fonte: <span>{fontSize}px</span></label>
-                                <input type="range" min="20" max="80" step="2" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value, 10))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
+                            
+                            {/* Controlo de Gravação */}
+                            <div className="flex justify-center items-center gap-4 pt-2">
+                                {!isRecording ? (
+                                    <>
+                                        <button onClick={() => startRecording('audio')} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title="Gravar Áudio">
+                                            <Icons.SoundOnIcon />
+                                        </button>
+                                        <button onClick={() => startRecording('video')} className="p-3 bg-red-600 text-white rounded-full hover:bg-red-500 transition animate-pulse" title="Gravar Vídeo">
+                                            <Icons.RecIcon />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button onClick={stopRecording} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title="Parar Gravação">
+                                        <Icons.StopIcon />
+                                    </button>
+                                )}
                             </div>
-                            <div className="flex items-center justify-between">
-                                <label htmlFor="mirror-toggle" className="text-xs font-medium text-slate-300 flex items-center gap-2 cursor-pointer"><Icons.FlipHorizontalIcon /> Espelhar Texto</label>
-                                <input type="checkbox" id="mirror-toggle" checked={isMirrored} onChange={() => setIsMirrored(!isMirrored)} className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded focus:ring-blue-500"/>
-                            </div>
-                        </div>
-
-                        {/* Controlos de Gravação */}
-                        <div className="bg-slate-800 p-3 rounded-lg flex justify-center gap-4">
-                           {!isRecording ? (
-                                <>
-                                    <button onClick={() => startRecording('audio')} className="bg-blue-600 text-white font-semibold py-2 px-3 text-sm rounded-lg hover:bg-blue-700 flex items-center gap-2"><Icons.SoundOnIcon/> Áudio</button>
-                                    <button onClick={() => startRecording('video')} className="bg-red-600 text-white font-semibold py-2 px-3 text-sm rounded-lg hover:bg-red-700 flex items-center gap-2"><Icons.VideoIcon/> Vídeo</button>
-                                </>
-                            ) : (
-                                <button onClick={stopRecording} className="bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-slate-600 flex items-center justify-center gap-2"><Icons.StopIcon/> Parar</button>
-                            )}
                         </div>
                         
                         {/* Galeria de Gravações */}
