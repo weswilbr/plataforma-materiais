@@ -1,8 +1,8 @@
 // NOME DO ARQUIVO: components/PlatformLayout.js
-// ATUALIZAÇÃO: Componente totalmente refatorado para usar a nova estrutura de componentes e dados,
-// tornando a lógica de renderização muito mais limpa e escalável.
+// ATUALIZAÇÃO: Funcionalidade de pesquisa de materiais ativada. A lógica de busca
+// e exibição de resultados foi implementada, e a partilha de materiais foi centralizada.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import InviteGenerator from './InviteGenerator';
@@ -12,7 +12,7 @@ import ProspectsList from './ProspectsList';
 import {
     MaterialViewer, BrochurePresenter, LoyaltyPresenter, TransferFactorPresenter, FactoryPresenter,
     ProductBrowser, OpportunityPresenter, BonusBuilderPresenter, TablesPresenter, GlossaryPresenter,
-    RankingPresenter, ChannelsPresenter, ArtsPresenter
+    RankingPresenter, ChannelsPresenter, ArtsPresenter, MaterialCard, ShareModal
 } from './materials';
 import { materialsMap } from '../data';
 import * as Icons from './icons';
@@ -48,6 +48,12 @@ const PlatformLayout = () => {
     const { user, logout, chatStatus, updateUserChatStatus } = useAuth();
     const [isChatVisible, setIsChatVisible] = useState(false);
 
+    // --- Estados para Pesquisa e Partilha ---
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [selectedMaterial, setSelectedMaterial] = useState(null);
+
     const commandMap = {
         'inicio': { title: 'Início', icon: <Icons.HomeIcon /> },
         'chat': { title: 'Chat Global', icon: <Icons.ChatIcon /> },
@@ -80,7 +86,61 @@ const PlatformLayout = () => {
         "Marketing": ['folheteria', 'artes', 'canais'],
     };
 
+    // --- Lógica de Pesquisa ---
+    const allMaterials = useMemo(() => {
+        const flattened = [];
+        const seenTitles = new Set();
+        
+        const addItem = (item) => {
+            if (item.title && item.url && !seenTitles.has(item.title)) {
+                flattened.push(item);
+                seenTitles.add(item.title);
+            }
+        };
+
+        Object.entries(materialsMap).forEach(([key, data]) => {
+            if (['positionsData', 'glossaryTerms', 'individualProducts'].includes(key)) return;
+            if (key === 'productData') {
+                Object.entries(data).forEach(([prodId, product]) => {
+                    Object.entries(product.content).forEach(([contentKey, contentItem]) => {
+                        addItem({
+                            ...contentItem,
+                            id: `product_${prodId}_${contentKey}`,
+                            title: `${product.name} - ${contentItem.title}`,
+                        });
+                    });
+                });
+            } else if (Array.isArray(data)) {
+                data.forEach(item => addItem(item));
+            } else if (typeof data === 'object' && data !== null) {
+                Object.values(data).forEach(value => {
+                    if (Array.isArray(value)) value.forEach(item => addItem(item));
+                    else if (typeof value === 'object' && value.title) addItem(value);
+                    else if (typeof value === 'object') {
+                        Object.values(value).forEach(subItem => addItem(subItem));
+                    }
+                });
+            }
+        });
+        return flattened;
+    }, []);
+
+    useEffect(() => {
+        if (searchQuery.trim() === '') {
+            setSearchResults([]);
+            return;
+        }
+        const lowercasedQuery = searchQuery.toLowerCase();
+        const results = allMaterials.filter(item =>
+            item.title.toLowerCase().includes(lowercasedQuery) ||
+            (item.description && item.description.toLowerCase().includes(lowercasedQuery))
+        );
+        setSearchResults(results);
+    }, [searchQuery, allMaterials]);
+    
+    // --- Handlers ---
     const handleMenuClick = (command, productId = null) => {
+        setSearchQuery('');
         if (command === 'chat') {
             if (chatStatus === 'offline') updateUserChatStatus('online');
             setIsChatVisible(!isChatVisible);
@@ -92,25 +152,37 @@ const PlatformLayout = () => {
     };
     
     const handleLogout = async () => { setIsLoggingOut(true); await logout(); };
+    const handleOpenShare = (material) => { setSelectedMaterial(material); setShareModalOpen(true); };
+    const handleCloseShare = () => setShareModalOpen(false);
+
+    // --- Renderização ---
+    const SearchResultsComponent = () => (
+        <MaterialViewer title={`Resultados para "${searchQuery}"`}>
+            {searchResults.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {searchResults.map((item, index) => <MaterialCard key={item.id || index} item={item} onShare={handleOpenShare} />)}
+                </div>
+            ) : (
+                <p className="text-center text-slate-500 dark:text-slate-400">Nenhum material encontrado.</p>
+            )}
+        </MaterialViewer>
+    );
 
     const renderContent = () => {
+        if (searchQuery.trim() !== '') return <SearchResultsComponent />;
+        
         const componentMap = {
-            'inicio': <WelcomeScreen />,
-            'convite': <InviteGenerator />,
-            'prospects': <ProspectsList />,
-            'apresentacao': <OpportunityPresenter />,
-            'bonusconstrutor': <BonusBuilderPresenter />,
-            'fabrica4life': <FactoryPresenter />,
-            'fatorestransferencia': <TransferFactorPresenter />,
-            'fidelidade': <LoyaltyPresenter />,
-            'folheteria': <BrochurePresenter />,
-            'artes': <ArtsPresenter />,
-            'tabelas': <TablesPresenter />,
-            'glossario': <GlossaryPresenter />,
-            'ranking': <RankingPresenter />,
+            'inicio': <WelcomeScreen />, 'convite': <InviteGenerator />, 'prospects': <ProspectsList />,
+            'apresentacao': <OpportunityPresenter onShare={handleOpenShare} />,
+            'bonusconstrutor': <BonusBuilderPresenter onShare={handleOpenShare} />,
+            'fabrica4life': <FactoryPresenter onShare={handleOpenShare} />,
+            'fatorestransferencia': <TransferFactorPresenter onShare={handleOpenShare} />,
+            'fidelidade': <LoyaltyPresenter onShare={handleOpenShare} />,
+            'folheteria': <BrochurePresenter onShare={handleOpenShare} />,
+            'artes': <ArtsPresenter onShare={handleOpenShare} />,
+            'tabelas': <TablesPresenter />, 'glossario': <GlossaryPresenter />, 'ranking': <RankingPresenter />,
             'canais': <ChannelsPresenter />,
-            'produtos': <ProductBrowser initialProductId={selectedProductId} onBack={() => handleMenuClick('inicio')} />,
-            // Adicione outros componentes aqui
+            'produtos': <ProductBrowser initialProductId={selectedProductId} onShare={handleOpenShare} onBack={() => handleMenuClick('inicio')} />,
         };
 
         const ActiveComponent = componentMap[activeCommand];
@@ -166,17 +238,23 @@ const PlatformLayout = () => {
                  </header>
                  <div className="flex-grow p-6 md:p-10 overflow-y-auto">
                      <div className="relative mb-6">
-                         <input type="text" placeholder="Pesquisar materiais (em breve)..." className="form-input w-full p-3 pl-10 bg-slate-100 dark:bg-indigo-800 border-slate-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-60" disabled />
+                         <input 
+                            type="text" 
+                            placeholder="Pesquisar em todos os materiais..." 
+                            className="form-input w-full p-3 pl-10 bg-slate-100 dark:bg-indigo-800 border-slate-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                         />
                          <Icons.SearchIcon />
                      </div>
                      {renderContent()}
                  </div>
             </main>
             {isChatVisible && <GlobalChat isVisible={isChatVisible} onClose={() => setIsChatVisible(false)} />}
+            {shareModalOpen && selectedMaterial && <ShareModal material={selectedMaterial} onClose={handleCloseShare} />}
         </div>
     );
 };
 
 export default PlatformLayout;
-
 
