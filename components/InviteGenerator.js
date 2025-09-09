@@ -1,10 +1,64 @@
 // NOME DO ARQUIVO: components/InviteGenerator.js
-// ATUALIZAÇÃO: O componente foi simplificado para focar apenas na geração de
-// texto, enquanto a lógica do teleprompter foi movida para o seu próprio arquivo.
+// ATUALIZAÇÃO: A interface de resultado foi redesenhada. Agora permite editar o texto,
+// copiar e partilhar diretamente para a lista de prospectos através de uma nova janela modal.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as Icons from './icons';
-import TeleprompterModal from './Teleprompter'; // Importa o novo componente
+import TeleprompterModal from './Teleprompter';
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../firebase';
+import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+
+// --- Sub-componente: Janela de Partilha para Prospectos ---
+const ShareToProspectModal = ({ onSelect, onClose }) => {
+    const { user } = useAuth();
+    const [prospects, setProspects] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) return;
+        const q = query(collection(db, `users/${user.uid}/prospects`), orderBy('name', 'asc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setProspects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        }, () => setLoading(false));
+        return () => unsubscribe();
+    }, [user]);
+
+    const filteredProspects = prospects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-lg shadow-2xl w-full max-w-md flex flex-col max-h-[80vh]">
+                <header className="p-4 border-b border-slate-700">
+                    <h3 className="text-lg font-bold text-white">Partilhar com Prospecto</h3>
+                    <input type="text" placeholder="Pesquisar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-700 text-white p-2 rounded-lg mt-2 border border-slate-600 focus:ring-blue-500"/>
+                </header>
+                <main className="p-4 overflow-y-auto">
+                    {loading ? (
+                        <p className="text-slate-400 text-center">A carregar...</p>
+                    ) : (
+                        <ul className="space-y-2">
+                            {filteredProspects.length > 0 ? filteredProspects.map(prospect => (
+                                <li key={prospect.id}>
+                                    <button onClick={() => onSelect(prospect)} className="w-full text-left p-3 bg-slate-700 hover:bg-slate-600 rounded-lg flex justify-between items-center transition">
+                                        <span className="font-medium text-white">{prospect.name}</span>
+                                        <span className="text-sm text-slate-400">{prospect.whatsapp}</span>
+                                    </button>
+                                </li>
+                            )) : <p className="text-slate-400 text-center">Nenhum prospecto encontrado.</p>}
+                        </ul>
+                    )}
+                </main>
+                <footer className="p-4 border-t border-slate-700">
+                    <button onClick={onClose} className="w-full p-2 bg-slate-600 hover:bg-slate-500 text-white font-semibold rounded-lg">Cancelar</button>
+                </footer>
+            </div>
+        </div>
+    );
+};
+
 
 const InviteGenerator = () => {
     // Estados do Gerador
@@ -14,7 +68,11 @@ const InviteGenerator = () => {
     const [generatedResponse, setGeneratedResponse] = useState('O seu convite aparecerá aqui...');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    
+    // Estados dos Modals e Ações
     const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [copyButtonText, setCopyButtonText] = useState('Copiar');
 
     const callApi = async (prompt) => {
         try {
@@ -47,6 +105,19 @@ const InviteGenerator = () => {
         }
         setIsLoading(false);
     };
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(generatedResponse);
+        setCopyButtonText('Copiado!');
+        setTimeout(() => setCopyButtonText('Copiar'), 2000);
+    };
+
+    const handleShareToProspect = (prospect) => {
+        if (!prospect || !prospect.whatsapp) return;
+        const encodedText = encodeURIComponent(generatedResponse);
+        window.open(`https://wa.me/${prospect.whatsapp.replace(/\D/g, '')}?text=${encodedText}`, '_blank');
+        setIsShareModalOpen(false);
+    };
     
     return (
         <>
@@ -62,20 +133,34 @@ const InviteGenerator = () => {
                 <div className="border-t border-slate-200 dark:border-slate-700 pt-8">
                      <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-semibold dark:text-slate-200">Resultado</h2>
-                        <div className="flex gap-2 flex-wrap">
-                            <button onClick={() => setIsTeleprompterOpen(true)} className="bg-teal-600 text-white font-semibold rounded-lg px-4 py-1.5 hover:bg-teal-700 transition flex items-center gap-2">
-                                <Icons.PresentationIcon/>Gravar Roteiro
-                            </button>
-                        </div>
                     </div>
-                     <div className="relative">
-                        <textarea value={generatedResponse} readOnly rows="10" className="w-full bg-slate-100 dark:bg-indigo-800/50 border border-slate-300 dark:border-slate-700 rounded-lg p-4" placeholder="O seu convite aparecerá aqui..."></textarea>
+                     <div className="bg-slate-100 dark:bg-indigo-800/50 rounded-lg p-4">
+                        <textarea 
+                            value={generatedResponse} 
+                            onChange={(e) => setGeneratedResponse(e.target.value)}
+                            rows="8" 
+                            className="w-full bg-transparent text-slate-800 dark:text-slate-200 text-lg leading-relaxed focus:outline-none resize-none" 
+                            placeholder="O seu convite aparecerá aqui..."
+                        />
                      </div>
+                     <div className="mt-4 flex flex-wrap gap-2 justify-end">
+                        <button onClick={handleCopy} className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-slate-600 transition flex items-center gap-2">
+                            <Icons.CopyIcon /> {copyButtonText}
+                        </button>
+                        <button onClick={() => setIsShareModalOpen(true)} className="bg-green-600 text-white font-semibold rounded-lg px-4 py-2 hover:bg-green-700 transition flex items-center gap-2">
+                            <Icons.WhatsAppIcon /> Partilhar
+                        </button>
+                        <button onClick={() => setIsTeleprompterOpen(true)} className="bg-teal-600 text-white font-semibold rounded-lg px-4 py-2 hover:bg-teal-700 transition flex items-center gap-2">
+                            <Icons.PresentationIcon/>Gravar Roteiro
+                        </button>
+                    </div>
                 </div>
             </div>
             {isTeleprompterOpen && <TeleprompterModal text={generatedResponse} onClose={() => setIsTeleprompterOpen(false)} />}
+            {isShareModalOpen && <ShareToProspectModal onClose={() => setIsShareModalOpen(false)} onSelect={handleShareToProspect} />}
         </>
     );
 };
 
 export default InviteGenerator;
+
