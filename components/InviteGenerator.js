@@ -1,9 +1,9 @@
 // NOME DO ARQUIVO: components/InviteGenerator.js
-// Componente para o gerador de convites com IA, com novo design e prompt otimizado.
+// REFACTOR: Substituição do `alert()` por uma mensagem de erro na UI para uma melhor experiência do usuário.
 
 import { useState, useRef } from 'react';
 
-// O Modal do Teleprompter é um sub-componente e pode viver no mesmo arquivo para simplicidade.
+// Modal do Teleprompter (sem alterações)
 const TeleprompterModal = ({ text, onClose }) => {
     const [isRecording, setIsRecording] = useState(false);
     const [recordingType, setRecordingType] = useState(null);
@@ -17,14 +17,12 @@ const TeleprompterModal = ({ text, onClose }) => {
         setError('');
         setMediaUrl(null);
         if (isRecording) return;
-
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
             streamRef.current = stream;
             if (type === 'video' && videoRef.current) {
                 videoRef.current.srcObject = stream;
             }
-            
             const recorder = new MediaRecorder(stream);
             mediaRecorderRef.current = recorder;
             const chunks = [];
@@ -72,17 +70,18 @@ const TeleprompterModal = ({ text, onClose }) => {
     );
 };
 
-
 const InviteGenerator = () => {
     const [guestName, setGuestName] = useState('');
     const [profileDescription, setProfileDescription] = useState('');
-    const [tone, setTone] = useState('profissional e formal');
+    const [tone, setTone] =useState('profissional e formal');
     const [generatedResponse, setGeneratedResponse] = useState('O seu convite aparecerá aqui...');
     const [isLoading, setIsLoading] = useState(false);
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [copyButtonText, setCopyButtonText] = useState('Copiar');
     const [whatsappNumber, setWhatsappNumber] = useState('');
     const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
+    // REFACTOR: Estado para gerenciar erros de validação.
+    const [error, setError] = useState('');
 
     const callApi = async (prompt) => {
         try {
@@ -101,8 +100,10 @@ const InviteGenerator = () => {
     };
 
     const handleGenerateClick = async () => {
+        setError('');
+        // REFACTOR: Validação com mensagem na UI.
         if (!guestName || !profileDescription) {
-            alert('Por favor, preencha o nome e a descrição do perfil.');
+            setError('Por favor, preencha o nome e a descrição do perfil para gerar o convite.');
             return;
         }
         setIsLoading(true);
@@ -115,9 +116,10 @@ const InviteGenerator = () => {
 
     const handleSummarizeClick = async () => {
         if (!generatedResponse || generatedResponse.startsWith('O seu convite')) {
-            alert('Não há texto para resumir. Gere um convite primeiro.');
+            setError('Não há texto para resumir. Gere um convite primeiro.');
             return;
         }
+        setError('');
         setIsSummarizing(true);
         const prompt = `Resuma o seguinte convite de negócios em uma ou duas frases curtas, mantendo o tom original e o idioma em português do Brasil: "${generatedResponse}"`;
         const result = await callApi(prompt);
@@ -133,9 +135,10 @@ const InviteGenerator = () => {
 
     const handleWhatsappShare = () => {
         if (!whatsappNumber) {
-            alert('Por favor, insira um número de telefone.');
+            setError('Por favor, insira um número de telefone para compartilhar.');
             return;
         }
+        setError('');
         const encodedText = encodeURIComponent(generatedResponse);
         window.open(`https://wa.me/${whatsappNumber}?text=${encodedText}`, '_blank');
     };
@@ -148,6 +151,8 @@ const InviteGenerator = () => {
                     <div><label htmlFor="guest-name" className="block text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">1. Nome do Convidado</label><input type="text" id="guest-name" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Digite o nome aqui..." className="w-full bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-slate-900 dark:text-white" /></div>
                     <div><label htmlFor="profile-description" className="block text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">2. Descreva o Perfil</label><textarea id="profile-description" value={profileDescription} onChange={(e) => setProfileDescription(e.target.value)} rows="3" placeholder="Ex: 'Colega ambicioso, bom em vendas e que procura uma renda extra.'" className="w-full bg-slate-50 dark:bg-indigo-800 border border-slate-300 dark:border-indigo-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-slate-900 dark:text-white"></textarea></div>
                     <div><label className="block text-lg font-medium text-slate-700 dark:text-slate-300 mb-3">3. Escolha o Tom</label><div className="flex flex-wrap gap-x-6 gap-y-2">{['profissional e formal', 'amigável e informal', 'entusiasmado e energético', 'direto e com senso de urgência', 'inspirador e motivacional'].map(t => (<label key={t} className="flex items-center cursor-pointer"><input type="radio" name="tone" value={t} checked={tone === t} onChange={(e) => setTone(e.target.value)} className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500 border-slate-300" /><span className="ml-2 text-md dark:text-slate-300 capitalize">{t.split(' ')[0]}</span></label>))}</div></div>
+                    {/* REFACTOR: Espaço para exibir a mensagem de erro */}
+                    {error && <p className="text-red-500 text-center text-sm -mt-2 mb-4">{error}</p>}
                     <button onClick={handleGenerateClick} disabled={isLoading} className="w-full bg-blue-600 text-white font-semibold rounded-lg px-6 py-3.5 hover:bg-blue-700 active:bg-blue-800 transition duration-200 ease-in-out shadow-lg disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg">{isLoading ? (<><div className="loader"></div><span>Gerando...</span></>) : (<> <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /></svg> <span>Gerar Convite com IA</span></>)}</button>
                 </div>
                 <div className="border-t border-slate-200 dark:border-slate-700 pt-8">
@@ -165,4 +170,3 @@ const InviteGenerator = () => {
 };
 
 export default InviteGenerator;
-

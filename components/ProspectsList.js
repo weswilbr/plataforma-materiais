@@ -1,12 +1,12 @@
 // NOME DO ARQUIVO: components/ProspectsList.js
-// COMPONENTE ATUALIZADO: Adicionados campos de localização, resumo no rodapé e edição de status diretamente na tabela.
+// REFACTOR: O formulário de adição agora exibe mensagens de erro na UI em vez de usar `alert()`.
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 
-// --- Ícones ---
+// --- Ícones (sem alterações) ---
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>;
 const DeleteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
@@ -20,21 +20,26 @@ const AddProspectForm = ({ onAdd, isLoading }) => {
     const [email, setEmail] = useState('');
     const [city, setCity] = useState('');
     const [state, setState] = useState('');
+    // REFACTOR: Estado para gerenciar erros de validação na UI.
+    const [error, setError] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        setError(''); // Limpa erros anteriores
+        // REFACTOR: Validação agora define uma mensagem de erro em vez de usar alert().
         if (!name.trim() || !whatsapp.trim()) {
-            alert('Nome e WhatsApp são obrigatórios.');
+            setError('Nome e WhatsApp são obrigatórios.');
             return;
         }
         if (phone.trim() && !/^\d{10,13}$/.test(phone)) {
-            alert('O número de telefone deve conter entre 10 a 13 dígitos.');
+            setError('O número de telefone deve conter entre 10 a 13 dígitos.');
             return;
         }
         if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            alert('Por favor, insira um email válido.');
+            setError('Por favor, insira um email válido.');
             return;
         }
+
         onAdd({ name, whatsapp, phone, email, city, state });
         setName('');
         setWhatsapp('');
@@ -58,6 +63,8 @@ const AddProspectForm = ({ onAdd, isLoading }) => {
                     {isLoading ? <div className="loader"></div> : <><PlusIcon /> Adicionar</>}
                 </button>
             </div>
+            {/* REFACTOR: Exibe a mensagem de erro na UI */}
+            {error && <p className="text-red-500 text-center text-sm mt-4">{error}</p>}
         </form>
     );
 };
@@ -75,7 +82,7 @@ const EditProspectModal = ({ prospect, onSave, onClose, isLoading }) => {
     
     const handleSave = () => {
         if (!name.trim() || !whatsapp.trim()) {
-            alert('Nome e WhatsApp são obrigatórios.');
+            alert('Nome e WhatsApp são obrigatórios.'); // Pode ser refatorado também
             return;
         }
         onSave(prospect.id, { name, whatsapp, phone, email, city, state, status });
@@ -224,4 +231,3 @@ const ProspectsList = () => {
 };
 
 export default ProspectsList;
-

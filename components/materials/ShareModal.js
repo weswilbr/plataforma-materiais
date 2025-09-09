@@ -1,11 +1,11 @@
 // NOME DO ARQUIVO: components/materials/ShareModal.js
-// DESCRIÇÃO: Componente para a janela de partilha de materiais com a lista de prospectos.
+// NOVO: Componente para a janela de partilha de materiais com a lista de prospectos.
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
-import { WhatsAppIcon } from './MaterialUI';
+import { WhatsAppIcon } from '../icons';
 
 const ShareModal = ({ material, onClose }) => {
     const { user } = useAuth();
@@ -27,20 +27,19 @@ const ShareModal = ({ material, onClose }) => {
     }, [user]);
 
     const handleSelectProspect = (prospectId) => {
-        setSelectedProspects(prev => 
+        setSelectedProspects(prev =>
             prev.includes(prospectId) ? prev.filter(id => id !== prospectId) : [...prev, prospectId]
         );
     };
 
     const handleShare = () => {
         const links = [];
-        // Constrói a URL completa e pública do ficheiro para partilha externa.
         const shareUrl = `${window.location.origin}${material.url}`;
 
         const baseMessage = material.productName
             ? `Olá [NOME], tudo bem? A pensar no nosso último contacto, queria partilhar consigo este material sobre o produto ${material.productName}. Acho que pode ser do seu interesse!\n\n${shareUrl}`
             : `Olá [NOME], tudo bem? Queria partilhar consigo este material sobre a nossa oportunidade de negócio. Penso que vai gostar!\n\n${shareUrl}`;
-        
+
         selectedProspects.forEach(prospectId => {
             const prospect = prospects.find(p => p.id === prospectId);
             if (prospect) {
@@ -51,7 +50,7 @@ const ShareModal = ({ material, onClose }) => {
         });
         setSharedLinks(links);
     };
-    
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl w-full max-w-lg">
@@ -80,7 +79,7 @@ const ShareModal = ({ material, onClose }) => {
                             {isLoading ? <p>A carregar prospectos...</p> : prospects.length > 0 ? (
                                 prospects.map(prospect => (
                                     <label key={prospect.id} className="flex items-center p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
-                                        <input type="checkbox" checked={selectedProspects.includes(prospect.id)} onChange={() => handleSelectProspect(prospect.id)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"/>
+                                        <input type="checkbox" checked={selectedProspects.includes(prospect.id)} onChange={() => handleSelectProspect(prospect.id)} className="form-checkbox h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"/>
                                         <span className="ml-3 text-slate-700 dark:text-slate-300">{prospect.name}</span>
                                     </label>
                                 ))
@@ -103,4 +102,3 @@ const ShareModal = ({ material, onClose }) => {
 };
 
 export default ShareModal;
-
