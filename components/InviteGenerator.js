@@ -1,7 +1,6 @@
 // NOME DO ARQUIVO: components/InviteGenerator.js
-// ATUALIZAÇÃO: O TeleprompterModal foi aprimorado com uma galeria de gravações que
-// agora inclui pré-visualização e uma função de partilha nativa para enviar
-// ficheiros diretamente para os prospectos.
+// ATUALIZAÇÃO: Os controlos de rolagem, velocidade e fonte do teleprompter
+// foram agrupados numa secção dedicada para uma melhor experiência de utilizador.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Icons from './icons'; // Importa todos os ícones de um só lugar
@@ -263,6 +262,31 @@ const TeleprompterModal = ({ text, onClose }) => {
                     </div>
                     {/* Coluna de Controlos e Galeria */}
                     <div className="w-full md:w-96 flex flex-col gap-4 flex-shrink-0">
+                        
+                        {/* Controlos do Roteiro */}
+                        <div className="bg-slate-800 p-4 rounded-lg space-y-4">
+                            <h4 className="font-bold text-white">Controlos do Roteiro</h4>
+                            <div className="flex items-center justify-center gap-4">
+                                <button onClick={() => setIsScrolling(p => !p)} className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition">
+                                    {isScrolling ? <Icons.PauseIcon /> : <Icons.PlayIcon />}
+                                </button>
+                                <button onClick={handleResetScroll} className="p-3 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition"><Icons.RewindIcon /></button>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
+                                <input type="range" min="0.5" max="5" step="0.1" value={scrollSpeed} onChange={(e) => setScrollSpeed(parseFloat(e.target.value))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-300 flex items-center justify-between">Tamanho da Fonte: <span>{fontSize}px</span></label>
+                                <input type="range" min="24" max="96" step="2" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value, 10))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <label htmlFor="mirror-toggle" className="text-sm font-medium text-slate-300 flex items-center gap-2 cursor-pointer"><Icons.FlipHorizontalIcon /> Espelhar Texto</label>
+                                <input type="checkbox" id="mirror-toggle" checked={isMirrored} onChange={() => setIsMirrored(!isMirrored)} className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded focus:ring-blue-500"/>
+                            </div>
+                        </div>
+
+                        {/* Controlos de Gravação */}
                         <div className="bg-slate-800 p-4 rounded-lg flex justify-center gap-4">
                            {!isRecording ? (
                                 <>
@@ -278,6 +302,8 @@ const TeleprompterModal = ({ text, onClose }) => {
                                 {preview.type === 'video' ? <video src={preview.url} controls autoPlay className="w-full rounded-lg"></video> : <audio src={preview.url} controls autoPlay className="w-full"></audio>}
                              </div>
                         )}
+
+                        {/* Galeria de Gravações */}
                         <div className="bg-slate-800 p-4 rounded-lg flex flex-col flex-grow min-h-0">
                             <div className="flex justify-between items-center mb-2">
                                 <h4 className="font-bold text-white">Minhas Gravações</h4>
