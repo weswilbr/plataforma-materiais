@@ -1,7 +1,7 @@
 // NOME DO ARQUIVO: components/InviteGenerator.js
-// ATUALIZAÇÃO: O componente TeleprompterModal foi completamente reescrito para
-// funcionar como um teleprompter real, com rolagem automática, controlos de
-// velocidade, tamanho da fonte e modo espelho.
+// ATUALIZAÇÃO: A interface do TeleprompterModal foi redesenhada para sobrepor
+// o texto do roteiro diretamente na visualização da câmera, criando uma
+// experiência de teleprompter mais autêntica.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Icons from './icons'; // Importa todos os ícones de um só lugar
@@ -55,7 +55,7 @@ const TeleprompterModal = ({ text, onClose }) => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
             streamRef.current = stream;
-            if (type === 'video' && videoRef.current) {
+            if (videoRef.current) {
                 videoRef.current.srcObject = stream;
             }
             
@@ -99,30 +99,32 @@ const TeleprompterModal = ({ text, onClose }) => {
                 </header>
 
                 <main className="flex-grow flex flex-col md:flex-row gap-4 p-4 overflow-hidden">
-                    {/* Coluna do Teleprompter */}
+                    {/* Coluna Principal: Vídeo com sobreposição de texto */}
                     <div className="flex-1 flex flex-col bg-black rounded-lg overflow-hidden relative">
-                        <div className="absolute top-1/2 left-0 right-0 h-1 bg-red-500/50 blur-sm z-10 pointer-events-none"></div>
-                        <div ref={textContainerRef} className="p-10 overflow-y-scroll scrollbar-hide flex-grow">
-                             <p 
-                                className={`text-white text-center transition-transform duration-300 ${isMirrored ? 'transform scale-x-[-1]' : ''}`}
-                                style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}
-                            >
-                                {text}
-                            </p>
+                        {/* Camada do Vídeo (fundo) */}
+                        <video ref={videoRef} autoPlay muted className="absolute inset-0 w-full h-full object-cover"></video>
+                        {!isRecording && !mediaUrl && (
+                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <span className="text-slate-400 text-lg bg-black/50 p-4 rounded-lg">A sua câmera aparecerá aqui</span>
+                             </div>
+                        )}
+
+                        {/* Camada do Texto (sobreposição) */}
+                        <div className="absolute inset-0 flex flex-col pointer-events-none">
+                            <div ref={textContainerRef} className="w-full max-w-4xl mx-auto p-10 overflow-y-scroll scrollbar-hide flex-grow relative pointer-events-auto">
+                                <div className="absolute top-1/4 left-0 right-0 h-px bg-red-500/70 z-10 pointer-events-none"></div>
+                                <p 
+                                    className={`text-white text-center transition-transform duration-300 backdrop-blur-sm bg-black/30 p-4 rounded-lg`}
+                                    style={{ fontSize: `${fontSize}px`, lineHeight: 1.5, transform: isMirrored ? 'scaleX(-1)' : 'scaleX(1)' }}
+                                >
+                                    {text}
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Coluna da Câmera e Controlos */}
+                    {/* Coluna de Controlos */}
                     <div className="w-full md:w-80 flex flex-col gap-4 flex-shrink-0">
-                        <div className="bg-black rounded-lg aspect-video flex items-center justify-center">
-                            <video ref={videoRef} autoPlay muted className={`w-full h-full object-cover rounded-lg ${isRecording || mediaUrl ? 'block' : 'hidden'}`}></video>
-                             {!isRecording && !mediaUrl && <span className="text-slate-500">A sua câmera aparecerá aqui</span>}
-                        </div>
-                        {mediaUrl && (
-                            <div className="text-center bg-slate-800 p-4 rounded-lg">
-                                <a href={mediaUrl} download={`convite_${recordingType}.webm`} className="inline-block bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 w-full">Baixar Gravação</a>
-                            </div>
-                        )}
                         <div className="bg-slate-800 p-4 rounded-lg space-y-4">
                             <h4 className="font-bold text-white">Controlos do Roteiro</h4>
                             <div className="flex items-center justify-center gap-4">
@@ -154,6 +156,11 @@ const TeleprompterModal = ({ text, onClose }) => {
                                 <button onClick={stopRecording} className="bg-slate-700 text-white font-semibold py-2 px-5 rounded-lg hover:bg-slate-600">Parar Gravação</button>
                             )}
                         </div>
+                        {mediaUrl && (
+                            <div className="text-center bg-slate-800 p-4 rounded-lg">
+                                <a href={mediaUrl} download={`convite_${recordingType}.webm`} className="inline-block bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 w-full">Baixar Gravação</a>
+                            </div>
+                        )}
                          {error && <p className="text-red-400 text-center text-sm">{error}</p>}
                     </div>
                 </main>
