@@ -283,43 +283,60 @@ const TeleprompterModal = ({ text, onClose }) => {
                     <h3 className="text-lg md:text-xl font-bold text-white flex items-center gap-3"><Icons.PresentationIcon /> Modo Roteiro</h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-white p-2 rounded-full">&times;</button>
                 </header>
-                <main className="flex-grow flex flex-col md:flex-row gap-2 md:gap-4 p-2 md:p-4 overflow-hidden">
-                    {/* Coluna Principal: Vídeo com sobreposição de texto */}
-                    <div className="flex-1 flex flex-col bg-black rounded-lg overflow-hidden relative min-h-[40vh] md:min-h-0">
-                        <video ref={videoRef} autoPlay muted className="absolute inset-0 w-full h-full object-cover"></video>
-                        {!isRecording && !streamRef.current && (
-                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <span className="text-slate-400 text-center text-base md:text-lg bg-black/50 p-4 rounded-lg">A sua câmera aparecerá aqui</span>
-                             </div>
-                        )}
-                        <div className="absolute inset-0 flex flex-col pointer-events-none">
-                            <div ref={textContainerRef} className="w-full max-w-4xl mx-auto p-4 md:p-10 overflow-y-scroll scrollbar-hide flex-grow relative pointer-events-auto">
-                                <div className="absolute top-1/4 left-0 right-0 h-px bg-red-500/70 z-10 pointer-events-none"></div>
-                                <p style={{ fontSize: `${fontSize}px`, lineHeight: 1.5, transform: isMirrored ? 'scaleX(-1)' : 'scaleX(1)' }}
-                                   className={`text-white text-center transition-transform duration-300 backdrop-blur-sm bg-black/30 p-4 rounded-lg`}>
-                                    {text}
-                                </p>
+                <main className="flex-grow flex flex-col md:flex-row gap-4 p-2 md:p-4 overflow-hidden">
+                    {/* Coluna Principal: Vídeo e Painel de Controlo (no rodapé em mobile) */}
+                    <div className="flex-1 flex flex-col bg-black rounded-lg overflow-hidden relative min-h-0">
+                        <div className="flex-grow relative">
+                            <video ref={videoRef} autoPlay muted className="absolute inset-0 w-full h-full object-cover"></video>
+                            {!isRecording && !streamRef.current && (
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <span className="text-slate-400 text-center text-base md:text-lg bg-black/50 p-4 rounded-lg">A sua câmera aparecerá aqui</span>
+                                </div>
+                            )}
+                            <div className="absolute inset-0 flex flex-col pointer-events-none">
+                                <div ref={textContainerRef} className="w-full max-w-4xl mx-auto p-4 md:p-10 overflow-y-scroll scrollbar-hide flex-grow relative pointer-events-auto">
+                                    <div className="absolute top-1/4 left-0 right-0 h-px bg-red-500/70 z-10 pointer-events-none"></div>
+                                    <p style={{ fontSize: `${fontSize}px`, lineHeight: 1.5, transform: isMirrored ? 'scaleX(-1)' : 'scaleX(1)' }}
+                                    className={`text-white text-center transition-transform duration-300 backdrop-blur-sm bg-black/30 p-4 rounded-lg`}>
+                                        {text}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {/* PAINEL DE CONTROLO PARA MOBILE */}
+                        <div className="md:hidden bg-blue-950/50 backdrop-blur-sm p-3 rounded-t-lg">
+                             <div className="flex items-center justify-center gap-4">
+                                <button onClick={() => setIsScrolling(p => !p)} className="p-2 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title={isScrolling ? "Pausar Rolagem" : "Iniciar Rolagem"}>
+                                    {isScrolling ? <Icons.PauseIcon /> : <Icons.PlayIcon />}
+                                </button>
+                                {!isRecording ? (
+                                    <button onClick={() => startRecording('video')} className="p-4 bg-red-600 text-white rounded-full hover:bg-red-500 transition animate-pulse" title="Gravar Vídeo">
+                                        <Icons.RecIcon />
+                                    </button>
+                                ) : (
+                                    <button onClick={stopRecording} className="p-4 bg-red-800 text-white rounded-full hover:bg-red-700 transition" title="Parar Gravação">
+                                        <Icons.StopIcon />
+                                    </button>
+                                )}
+                                <button onClick={() => startRecording('audio')} disabled={isRecording} className="p-2 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition disabled:opacity-50" title="Gravar Áudio">
+                                    <Icons.SoundOnIcon />
+                                </button>
                             </div>
                         </div>
                     </div>
-                    {/* Coluna de Controlos e Galeria */}
-                    <div className="w-full md:w-80 flex flex-col gap-2 flex-shrink-0 md:max-h-full overflow-y-auto">
-                        
-                        {/* Painel de Controlo Unificado */}
+                    {/* Coluna Direita: Painel de Controlo (desktop) e Galeria */}
+                    <div className="w-full md:w-80 flex-col gap-4 flex-shrink-0 md:max-h-full overflow-y-auto hidden md:flex">
+                         {/* PAINEL DE CONTROLO PARA DESKTOP */}
                         <div className="bg-slate-800 p-3 rounded-lg space-y-3">
                             <h4 className="font-bold text-white text-base">Painel de Controlo</h4>
-                            
-                            {/* Controlos de Rolagem e Gravação */}
-                            <div className="flex items-center justify-center gap-3 border-b border-slate-700 pb-3">
+                             <div className="flex items-center justify-center gap-3 border-b border-slate-700 pb-3">
                                 <button onClick={() => setIsScrolling(p => !p)} className="p-2 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title={isScrolling ? "Pausar Rolagem" : "Iniciar Rolagem"}>
                                     {isScrolling ? <Icons.PauseIcon /> : <Icons.PlayIcon />}
                                 </button>
                                 <button onClick={handleResetScroll} className="p-2 bg-slate-700 text-white rounded-full hover:bg-slate-600 transition" title="Reiniciar Rolagem">
                                     <Icons.RewindIcon />
                                 </button>
-                                
                                 <div className="h-6 w-px bg-slate-700"></div>
-
                                 {!isRecording ? (
                                     <>
                                         <button onClick={() => startRecording('audio')} className="p-3 bg-slate-700 text-white rounded-full hover:bg-blue-500 transition" title="Gravar Áudio">
@@ -335,8 +352,6 @@ const TeleprompterModal = ({ text, onClose }) => {
                                     </button>
                                 )}
                             </div>
-                            
-                            {/* Ajustes */}
                             <div className="space-y-2">
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium text-slate-300 flex items-center justify-between">Velocidade: <span>{scrollSpeed.toFixed(1)}x</span></label>
@@ -352,27 +367,31 @@ const TeleprompterModal = ({ text, onClose }) => {
                                 </div>
                             </div>
                         </div>
-                        
                         {/* Galeria de Gravações */}
                         <div className="bg-slate-800 p-3 rounded-lg flex flex-col flex-grow min-h-0">
-                            <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-bold text-white text-base">Minhas Gravações</h4>
-                                <button onClick={deleteAllRecordings} className="text-red-400 hover:text-red-300 text-xs font-semibold">REINICIAR</button>
-                            </div>
-                            <div className="flex-grow overflow-y-auto space-y-2 pr-2">
-                                {savedRecordings.length > 0 ? savedRecordings.map(rec => (
-                                    <div key={rec.id} className="bg-slate-700 p-2 rounded-lg flex items-center justify-between">
-                                        <div className="flex-grow overflow-hidden mr-2">
-                                            <p className="text-white font-medium text-sm truncate">{rec.name}</p>
+                            <details className="group">
+                                <summary className="flex justify-between items-center cursor-pointer list-none">
+                                     <h4 className="font-bold text-white text-base">Minhas Gravações ({savedRecordings.length})</h4>
+                                     <div className="flex items-center">
+                                        <button onClick={(e) => { e.stopPropagation(); deleteAllRecordings(); }} className="text-red-400 hover:text-red-300 text-xs font-semibold mr-2">REINICIAR</button>
+                                        <span className="transform transition-transform group-open:rotate-180 text-white">&#9660;</span>
+                                     </div>
+                                </summary>
+                                <div className="mt-2 pt-2 border-t border-slate-700 max-h-48 overflow-y-auto space-y-2 pr-2">
+                                    {savedRecordings.length > 0 ? savedRecordings.map(rec => (
+                                        <div key={rec.id} className="bg-slate-700 p-2 rounded-lg flex items-center justify-between">
+                                            <div className="flex-grow overflow-hidden mr-2">
+                                                <p className="text-white font-medium text-sm truncate">{rec.name}</p>
+                                            </div>
+                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                                <button onClick={() => handlePreview(rec)} className="p-2 text-slate-300 hover:text-white"><Icons.PlayCircleIcon /></button>
+                                                <button onClick={() => { setSelectedRecording(rec); setIsProspectModalOpen(true); }} className="p-2 text-slate-300 hover:text-white"><Icons.SendIcon /></button>
+                                                <button onClick={() => deleteRecording(rec.id)} className="p-2 text-red-400 hover:text-red-300"><Icons.TrashIcon /></button>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-1 flex-shrink-0">
-                                            <button onClick={() => handlePreview(rec)} className="p-2 text-slate-300 hover:text-white"><Icons.PlayCircleIcon /></button>
-                                            <button onClick={() => { setSelectedRecording(rec); setIsProspectModalOpen(true); }} className="p-2 text-slate-300 hover:text-white"><Icons.SendIcon /></button>
-                                            <button onClick={() => deleteRecording(rec.id)} className="p-2 text-red-400 hover:text-red-300"><Icons.TrashIcon /></button>
-                                        </div>
-                                    </div>
-                                )) : <p className="text-slate-500 text-sm text-center pt-8">Nenhuma gravação encontrada.</p>}
-                            </div>
+                                    )) : <p className="text-slate-500 text-sm text-center pt-4">Nenhuma gravação encontrada.</p>}
+                                </div>
+                            </details>
                         </div>
                          {error && <p className="text-red-400 text-center text-sm p-2 bg-red-900/50 rounded-lg">{error}</p>}
                     </div>
@@ -495,3 +514,4 @@ const InviteGenerator = ({ onShare }) => {
 };
 
 export default InviteGenerator;
+
