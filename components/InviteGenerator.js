@@ -1,10 +1,10 @@
 // NOME DO ARQUIVO: components/InviteGenerator.js
-// ATUALIZAÇÃO: O prompt enviado para a IA foi substituído por uma versão mais
-// estratégica e detalhada, focada em copywriting emocional e persuasivo.
+// ATUALIZAÇÃO: Adicionada uma nova seção para escolher o "Objetivo do Convite"
+// (Negócio ou Feira de Bem-Estar), que altera dinamicamente o prompt da IA.
 
 import { useState, useEffect } from 'react';
 import * as Icons from './icons';
-import TeleprompterModal from './Teleprompter';
+import Teleprompter from './Teleprompter';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
@@ -63,6 +63,7 @@ const ShareToProspectModal = ({ onSelect, onClose }) => {
 const InviteGenerator = () => {
     // Estados do Gerador
     const [guestName, setGuestName] = useState('');
+    const [objective, setObjective] = useState('negocio'); // 'negocio' ou 'feira'
     const [profileDescription, setProfileDescription] = useState('');
     const [tone, setTone] = useState('amigável e inspirador');
     const [generatedResponse, setGeneratedResponse] = useState('O seu convite aparecerá aqui...');
@@ -93,18 +94,16 @@ const InviteGenerator = () => {
     const handleGenerateClick = async () => {
         setError('');
         if (!guestName || !profileDescription) {
-            setError('Por favor, preencha o nome e a descrição do perfil.');
+            setError('Por favor, preencha todos os campos obrigatórios.');
             return;
         }
         setIsLoading(true);
         setGeneratedResponse('');
 
-        const prompt = `
+        const baseInstructions = `
         **Instruções para a IA:**
 
         **Sua Persona:** Você é um especialista em copywriting de convites estratégicos.
-
-        **Sua Missão:** Criar um texto envolvente para convidar uma pessoa a participar de um encontro online exclusivo da Equipe do Triunfo.
         
         **Regras Essenciais:**
         1.  **Nunca** mencione diretamente "marketing de rede" ou "multinível".
@@ -112,14 +111,22 @@ const InviteGenerator = () => {
         3.  O convite deve gerar **curiosidade** e senso de **oportunidade**.
         4.  **Tom de voz:** ${tone}.
         5.  **Comprimento do convite:** entre 4 e 6 frases.
-        6.  **Finalização:** Sempre finalize com um chamado leve para ação (ex.: “posso te enviar o link?”, “topa ouvir mais sobre isso?”).
+        6.  **Finalização:** Sempre termine com um chamado leve para ação (ex.: “posso te enviar o link?”, “topa ouvir mais sobre isso?”).
 
         **Variáveis para Adaptar:**
         - **Nome do Convidado:** ${guestName}
         - **Perfil da pessoa (profissão, situação de vida, dores, aspirações):** "${profileDescription}"
-        
-        Agora, crie o convite para ${guestName}.
         `;
+
+        const businessMission = `
+        **Sua Missão:** Criar um texto envolvente para convidar uma pessoa a participar de um encontro online exclusivo da Equipe do Triunfo focado em **oportunidades de negócio**. O objetivo é despertar o interesse para uma apresentação de novas possibilidades financeiras e de carreira.
+        `;
+
+        const wellnessMission = `
+        **Sua Missão:** Criar um texto envolvente para convidar uma pessoa para uma **Feira de Bem-Estar online** da Equipe do Triunfo. O foco é saúde, qualidade de vida e dicas práticas. Mencione que haverá **profissionais da saúde partilhando excelentes dicas**.
+        `;
+
+        const prompt = baseInstructions + (objective === 'negocio' ? businessMission : wellnessMission) + `\nAgora, crie o convite para ${guestName}.`;
 
         const result = await callApi(prompt);
         if (result) {
@@ -147,8 +154,29 @@ const InviteGenerator = () => {
                  <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-200">Gerador de Convites com IA</h2>
                  <div className="space-y-6">
                     <div><label htmlFor="guest-name" className="block text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">1. Nome do Convidado</label><input type="text" id="guest-name" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Digite o nome aqui..." className="form-input w-full bg-slate-50 dark:bg-indigo-800 border-slate-300 dark:border-indigo-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500" /></div>
-                    <div><label htmlFor="profile-description" className="block text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">2. Descreva o Perfil</label><textarea id="profile-description" value={profileDescription} onChange={(e) => setProfileDescription(e.target.value)} rows="3" placeholder="Ex: 'Colega ambicioso, bom em vendas...'" className="form-textarea w-full bg-slate-50 dark:bg-indigo-800 border-slate-300 dark:border-indigo-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500"></textarea></div>
-                    <div><label className="block text-lg font-medium text-slate-700 dark:text-slate-300 mb-3">3. Escolha o Tom</label><div className="flex flex-wrap gap-x-6 gap-y-2">{['amigável e inspirador', 'profissional e formal', 'entusiasmado e energético', 'direto e com senso de urgência'].map(t => (<label key={t} className="flex items-center cursor-pointer"><input type="radio" name="tone" value={t} checked={tone === t} onChange={(e) => setTone(e.target.value)} className="form-radio h-5 w-5 text-blue-600" /><span className="ml-2 text-md dark:text-slate-300 capitalize">{t.split(' ')[0]}</span></label>))}</div></div>
+                    
+                    <div>
+                        <label className="block text-lg font-medium text-slate-700 dark:text-slate-300 mb-3">2. Qual o Objetivo do Convite?</label>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <label className={`flex-1 flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${objective === 'negocio' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50' : 'border-slate-300 dark:border-indigo-700'}`}>
+                                <input type="radio" name="objective" value="negocio" checked={objective === 'negocio'} onChange={(e) => setObjective(e.target.value)} className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500" />
+                                <span className="ml-3">
+                                    <span className="block text-md font-semibold dark:text-slate-200">Negócio</span>
+                                    <span className="block text-sm text-slate-500 dark:text-slate-400">Convidar para uma apresentação da oportunidade.</span>
+                                </span>
+                            </label>
+                            <label className={`flex-1 flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${objective === 'feira' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50' : 'border-slate-300 dark:border-indigo-700'}`}>
+                                <input type="radio" name="objective" value="feira" checked={objective === 'feira'} onChange={(e) => setObjective(e.target.value)} className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500" />
+                                <span className="ml-3">
+                                    <span className="block text-md font-semibold dark:text-slate-200">Feira de Bem-Estar</span>
+                                    <span className="block text-sm text-slate-500 dark:text-slate-400">Convidar para um evento de saúde com dicas de profissionais.</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div><label htmlFor="profile-description" className="block text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">3. Descreva o Perfil</label><textarea id="profile-description" value={profileDescription} onChange={(e) => setProfileDescription(e.target.value)} rows="3" placeholder="Ex: 'Colega ambicioso, bom em vendas...'" className="form-textarea w-full bg-slate-50 dark:bg-indigo-800 border-slate-300 dark:border-indigo-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500"></textarea></div>
+                    <div><label className="block text-lg font-medium text-slate-700 dark:text-slate-300 mb-3">4. Escolha o Tom</label><div className="flex flex-wrap gap-x-6 gap-y-2">{['amigável e inspirador', 'profissional e formal', 'entusiasmado e energético', 'direto e com senso de urgência'].map(t => (<label key={t} className="flex items-center cursor-pointer"><input type="radio" name="tone" value={t} checked={tone === t} onChange={(e) => setTone(e.target.value)} className="form-radio h-5 w-5 text-blue-600" /><span className="ml-2 text-md dark:text-slate-300 capitalize">{t.split(' ')[0]}</span></label>))}</div></div>
                     {error && <p className="text-red-500 bg-red-100 dark:bg-red-900/30 p-3 rounded-lg text-sm">{error}</p>}
                     <button onClick={handleGenerateClick} disabled={isLoading} className="w-full bg-blue-600 text-white font-semibold rounded-lg px-6 py-3.5 hover:bg-blue-700 active:bg-blue-800 transition shadow-lg disabled:bg-slate-400 flex items-center justify-center gap-3 text-lg">{isLoading ? (<><div className="loader"></div><span>A gerar...</span></>) : (<> <Icons.SparklesIcon /> <span>Gerar Convite com IA</span></>)}</button>
                 </div>
@@ -178,7 +206,7 @@ const InviteGenerator = () => {
                    </div>
                 </div>
             </div>
-            {isTeleprompterOpen && <TeleprompterModal text={generatedResponse} onClose={() => setIsTeleprompterOpen(false)} />}
+            {isTeleprompterOpen && <Teleprompter text={generatedResponse} onClose={() => setIsTeleprompterOpen(false)} />}
             {isShareModalOpen && <ShareToProspectModal onClose={() => setIsShareModalOpen(false)} onSelect={handleShareToProspect} />}
         </>
     );
