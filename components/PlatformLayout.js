@@ -18,7 +18,7 @@ import {
 import { materialsMap } from '../data';
 import * as Icons from './icons';
 
-// Componente de Tema (sem alterações)
+// Componente de Tema
 const ThemeSwitcher = () => {
     const [theme, setTheme] = useState('light');
     useEffect(() => {
@@ -89,12 +89,54 @@ const PlatformLayout = () => {
 
     // --- Lógica de Pesquisa ---
     const allMaterials = useMemo(() => {
-        // ... (lógica de pesquisa inalterada)
-        return [];
+        const flattened = [];
+        const seenTitles = new Set();
+        
+        const addItem = (item) => {
+            if (item.title && item.url && !seenTitles.has(item.title)) {
+                flattened.push(item);
+                seenTitles.add(item.title);
+            }
+        };
+
+        Object.entries(materialsMap).forEach(([key, data]) => {
+            if (['positionsData', 'glossaryTerms', 'individualProducts'].includes(key)) return;
+            if (key === 'productData') {
+                Object.entries(data).forEach(([prodId, product]) => {
+                    Object.entries(product.content).forEach(([contentKey, contentItem]) => {
+                        addItem({
+                            ...contentItem,
+                            id: `product_${prodId}_${contentKey}`,
+                            title: `${product.name} - ${contentItem.title}`,
+                        });
+                    });
+                });
+            } else if (Array.isArray(data)) {
+                data.forEach(item => addItem(item));
+            } else if (typeof data === 'object' && data !== null) {
+                Object.values(data).forEach(value => {
+                    if (Array.isArray(value)) value.forEach(item => addItem(item));
+                    else if (typeof value === 'object' && value.title) addItem(value);
+                    else if (typeof value === 'object') {
+                        Object.values(value).forEach(subItem => addItem(subItem));
+                    }
+                });
+            }
+        });
+        return flattened;
     }, []);
 
     useEffect(() => {
-        // ... (lógica de pesquisa inalterada)
+        if (searchQuery.trim() === '') {
+            setSearchResults([]);
+            return;
+        }
+        const lowercasedQuery = searchQuery.toLowerCase();
+        const results = allMaterials.filter(item =>
+            item.title.toLowerCase().includes(lowercasedQuery) ||
+            (item.description && item.description.toLowerCase().includes(lowercasedQuery))
+        );
+        setSearchResults(results);
     }, [searchQuery, allMaterials]);
     
     // --- Handlers ---
@@ -222,3 +264,4 @@ const PlatformLayout = () => {
 };
 
 export default PlatformLayout;
+
