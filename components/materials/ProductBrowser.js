@@ -1,54 +1,95 @@
 // NOME DO ARQUIVO: components/materials/ProductBrowser.js
-// ATUALIZAÇÃO: Refatorado para usar a nova estrutura de dados e componentes, e integrar a partilha.
+// REESCRITA: O componente foi simplificado para focar exclusivamente na exibição
+// dos materiais de um produto específico. A funcionalidade de geração de "pitch" com IA
+// foi removida para uma interface mais limpa e direta.
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { materialsMap } from '../../data';
 import { MaterialCard } from './MaterialCard';
 import ShareModal from './ShareModal';
 
 export const ProductBrowser = ({ initialProductId, onBack }) => {
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [generatedPitches, setGeneratedPitches] = useState({});
-    const [isPitchLoading, setIsPitchLoading] = useState(null);
-    const [pitchCopyButtonText, setPitchCopyButtonText] = useState({});
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [selectedMaterial, setSelectedMaterial] = useState(null);
 
+    // Efeito para carregar os dados do produto quando o ID é recebido
     useEffect(() => {
         if (initialProductId) {
             const product = materialsMap.productData[initialProductId];
-            setSelectedProduct({ id: initialProductId, ...product });
+            if (product) {
+                setSelectedProduct({ id: initialProductId, ...product });
+            } else {
+                // Caso o ID do produto seja inválido, volta para a lista
+                onBack();
+            }
         } else {
             setSelectedProduct(null);
         }
-    }, [initialProductId]);
+    }, [initialProductId, onBack]);
 
+    // Handler para abrir o modal de partilha
     const handleOpenShare = (material) => {
+        // Adiciona o nome do produto ao material para usar na mensagem de partilha
         setSelectedMaterial({ ...material, productName: selectedProduct.name });
         setShareModalOpen(true);
     };
 
-    const callApi = async (prompt) => { try { const response = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), }); if (!response.ok) throw new Error('Falha na resposta da API.'); const data = await response.json(); return data.text; } catch (error) { console.error('Erro ao chamar a API:', error); return 'Ocorreu um erro ao processar o seu pedido.'; } };
-    const handleGeneratePitchClick = async (productId, productName) => { setIsPitchLoading(productId); const prompt = `Gere 3 opções distintas de copy de anúncio para tráfego pago, em português do Brasil, para o produto "${productName}". Cada opção deve ser curta (2-3 frases), persuasiva, usar emojis ✨ e ter uma chamada para ação clara como "Saiba Mais". Separe as 3 opções EXATAMENTE com '|||' e não adicione nenhum texto introdutório, numeração ou títulos.`; const result = await callApi(prompt); const resultsArray = result.split('|||').map(s => s.trim()).filter(Boolean); setGeneratedPitches(prev => ({ ...prev, [productId]: resultsArray })); setIsPitchLoading(null); };
-    const handleCopyPitch = (textToCopy, productId, index) => { navigator.clipboard.writeText(textToCopy); const key = `${productId}-${index}`; setPitchCopyButtonText(prev => ({ ...prev, [key]: 'Copiado!' })); setTimeout(() => setPitchCopyButtonText(prev => ({ ...prev, [key]: 'Copiar' })), 2000); };
+    // Handler para fechar o modal de partilha
+    const handleCloseShare = () => {
+        setShareModalOpen(false);
+        setSelectedMaterial(null);
+    };
 
-    if (!selectedProduct) return <p>Selecione um produto no menu.</p>;
+    // Se nenhum produto estiver selecionado (ou a carregar), mostra uma mensagem
+    if (!selectedProduct) {
+        return (
+            <div className="text-center p-10">
+                <p className="text-slate-500">A carregar produto...</p>
+            </div>
+        );
+    }
 
     return (
-        <div>
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-200">{selectedProduct.name}</h2>
-                <button onClick={onBack} className="bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition">&larr; Voltar</button>
+        <div className="animate-fade-in">
+            {/* Cabeçalho da página do produto */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+                 <div className="flex items-center gap-4">
+                    <div className="relative w-20 h-20 flex-shrink-0">
+                        <Image 
+                            src={selectedProduct.image} 
+                            alt={selectedProduct.name} 
+                            layout="fill"
+                            objectFit="contain"
+                            className="bg-slate-100 dark:bg-indigo-800 rounded-full p-2"
+                        />
+                    </div>
+                    <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-200">{selectedProduct.name}</h2>
+                </div>
+                <button 
+                    onClick={onBack} 
+                    className="w-full sm:w-auto bg-slate-200 dark:bg-indigo-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-4 py-2 hover:bg-slate-300 dark:hover:bg-indigo-600 transition flex-shrink-0"
+                >
+                    &larr; Voltar para Todos os Produtos
+                </button>
             </div>
+
+            {/* Grelha de materiais do produto */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Object.values(selectedProduct.content).map(item => (
-                    <MaterialCard key={item.title} item={item} onShare={handleOpenShare} />
+                    <MaterialCard 
+                        key={item.title} 
+                        item={item} 
+                        onShare={handleOpenShare} // Passa a função de partilha para cada cartão
+                    />
                 ))}
             </div>
+
+            {/* Modal de partilha */}
             {shareModalOpen && selectedMaterial && (
-                <ShareModal material={selectedMaterial} onClose={() => setShareModalOpen(false)} />
+                <ShareModal material={selectedMaterial} onClose={handleCloseShare} />
             )}
         </div>
     );
 };
-

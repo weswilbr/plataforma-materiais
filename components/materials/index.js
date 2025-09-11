@@ -13,8 +13,8 @@ export { MaterialCard } from './MaterialCard';
 export { MaterialViewer } from './MaterialViewer';
 export { OpportunityPresenter } from './OpportunityPresenter';
 export { ProductBrowser } from './ProductBrowser';
+export { ProductShowcase } from './ProductShowcase';
 export { RankingPresenter } from './RankingPresenter';
-export { ShareModal } from './ShareModal';
+export { default as ShareModal } from './ShareModal'; // CORREÇÃO: Ajustado para exportar um 'default' import.
 export { TablesPresenter } from './TablesPresenter';
 export { TransferFactorPresenter } from './TransferFactorPresenter';
-

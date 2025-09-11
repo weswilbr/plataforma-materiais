@@ -31,17 +31,13 @@ const ProductCard = ({ product, onProductSelect }) => (
 
 // --- Componente Principal da Vitrine ---
 export const ProductShowcase = ({ onProductSelect }) => {
-    // <<< CORREÇÃO APLICADA AQUI >>>
-    // Convertemos o objeto de produtos em um array de produtos.
-    // O `|| {}` garante que o código não quebre se `individualProducts` for nulo ou indefinido.
-    const productsArray = Object.values(materialsMap.individualProducts || {});
+    const products = materialsMap.individualProducts;
 
     return (
         <div className="animate-fade-in">
             <h2 className="text-3xl font-bold mb-8 text-slate-800 dark:text-slate-200">Nossos Produtos</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {/* Usamos o novo array para o .map() */}
-                {productsArray.map(product => (
+                {products.map(product => (
                     <ProductCard 
                         key={product.id} 
                         product={product}
