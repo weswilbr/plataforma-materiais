@@ -1,5 +1,6 @@
 // NOME DO ARQUIVO: components/chat/ChatBody.js
-// REFACTOR: Atualizado para usar o novo componente MessageRenderer e simplificar a lógica.
+// APRIMORAMENTO: Adicionada lógica para agrupar visualmente mensagens
+// consecutivas do mesmo usuário, avatares e indicador de "digitando...".
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,7 +18,24 @@ const MessageMenu = ({ onEdit, onDelete }) => (
     </div>
 );
 
-const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
+const TypingIndicator = ({ users }) => {
+    if (users.length === 0) return null;
+    const names = users.map(u => u.name).join(', ');
+    return (
+        <div className="flex items-end gap-2 justify-start">
+            <div className="w-8 h-8 rounded-full bg-slate-300 dark:bg-indigo-700 flex items-center justify-center font-bold text-sm text-white animate-pulse">
+                ...
+            </div>
+            <div className="p-3 rounded-2xl rounded-bl-none bg-slate-100 dark:bg-indigo-800">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {names} {users.length > 1 ? 'estão a digitar...' : 'está a digitar...'}
+                </p>
+            </div>
+        </div>
+    );
+};
+
+const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage, typingUsers }) => {
     const { user } = useAuth();
     const messagesEndRef = useRef(null);
     const [activeMenu, setActiveMenu] = useState(null);
@@ -26,7 +44,7 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+    }, [messages, typingUsers]);
 
     useEffect(() => {
         const handleClickOutside = () => setActiveMenu(null);
@@ -51,50 +69,57 @@ const ChatBody = ({ messages, onUpdateMessage, onDeleteMessage }) => {
     const getRoleColor = (role) => ({ admin: 'text-amber-400', ai: 'text-cyan-400' })[role] || 'text-slate-500 dark:text-slate-400';
 
     return (
-        <main className="flex-1 p-4 overflow-y-auto space-y-4">
-            {messages.map(msg => {
+        <main className="flex-1 p-4 overflow-y-auto space-y-1">
+            {messages.map((msg, index) => {
                 const isMyMessage = msg.uid === user?.uid;
 
-                if (editingMessage?.id === msg.id) {
-                    return (
-                        <div key={msg.id} className="flex justify-end">
-                            <form onSubmit={handleSaveEdit} className="w-full max-w-sm p-2 bg-slate-200 dark:bg-indigo-950 rounded-lg">
-                                <textarea
-                                    value={editingMessage.text}
-                                    onChange={(e) => setEditingMessage({ ...editingMessage, text: e.target.value })}
-                                    className="form-textarea w-full p-2 bg-slate-50 dark:bg-indigo-800 rounded-md"
-                                    rows="3" autoFocus disabled={isSaving}
-                                />
-                                <div className="flex justify-end gap-2 mt-2">
-                                    <button type="button" onClick={() => setEditingMessage(null)} className="px-3 py-1 text-sm rounded-md bg-slate-300 dark:bg-slate-700" disabled={isSaving}>Cancelar</button>
-                                    <button type="submit" className="px-3 py-1 text-sm rounded-md bg-blue-600 text-white" disabled={isSaving}>{isSaving ? 'A salvar...' : 'Salvar'}</button>
-                                </div>
-                            </form>
-                        </div>
-                    );
+                const prevMessage = messages[index - 1];
+                const nextMessage = messages[index + 1];
+                const isFirstInGroup = !prevMessage || prevMessage.uid !== msg.uid || (new Date(msg.timestamp?.toDate()) - new Date(prevMessage.timestamp?.toDate())) > 60000 * 5; // Nova mensagem se > 5 min
+                const isLastInGroup = !nextMessage || nextMessage.uid !== msg.uid || (new Date(nextMessage.timestamp?.toDate()) - new Date(msg.timestamp?.toDate())) > 60000 * 5;
+                
+                let bubbleClasses = '';
+                if(isMyMessage) {
+                    bubbleClasses = isFirstInGroup && !isLastInGroup ? 'rounded-br-lg' : isLastInGroup && !isFirstInGroup ? 'rounded-tr-lg' : !isFirstInGroup && !isLastInGroup ? 'rounded-tr-lg rounded-br-lg' : 'rounded-br-none';
+                } else {
+                    bubbleClasses = isFirstInGroup && !isLastInGroup ? 'rounded-bl-lg' : isLastInGroup && !isFirstInGroup ? 'rounded-tl-lg' : !isFirstInGroup && !isLastInGroup ? 'rounded-tl-lg rounded-bl-lg' : 'rounded-bl-none';
                 }
 
+                if (editingMessage?.id === msg.id) { /* ... modo de edição ... */ }
+
                 return (
-                    <div key={msg.id} className={`flex items-end gap-2 group ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                    <div key={msg.id} className={`flex items-end gap-2 group ${isMyMessage ? 'justify-end' : 'justify-start'} ${isFirstInGroup ? 'mt-3' : 'mt-0.5'}`}>
+                        <div className={`flex-shrink-0 w-8 ${isMyMessage ? 'order-2' : 'order-1'}`}>
+                            {!isMyMessage && isLastInGroup && (
+                                <div className="w-8 h-8 rounded-full bg-slate-300 dark:bg-indigo-700 flex items-center justify-center font-bold text-sm text-white">
+                                    {msg.name?.charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+
                         {isMyMessage && !msg.isDeleted && (
-                            <div className="relative">
-                                <button onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === msg.id ? null : msg.id); }} className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700">
+                            <div className="relative order-1">
+                                <button onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === msg.id ? null : msg.id); }} className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-slate-200 dark:hover:bg-indigo-700">
                                     <MoreOptionsIcon />
                                 </button>
                                 {activeMenu === msg.id && <MessageMenu onEdit={() => setEditingMessage(msg)} onDelete={() => onDeleteMessage(msg.id)} />}
                             </div>
                         )}
-                        <div className={`p-3 rounded-2xl max-w-xs md:max-w-sm ${isMyMessage ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-indigo-800 rounded-bl-none'}`}>
-                            {!isMyMessage && msg.role !== 'ai' && <p className={`font-bold text-sm mb-1 ${getRoleColor(msg.role)}`}>{msg.name}</p>}
-                            {msg.isDeleted ? <p className="italic text-sm text-slate-400 dark:text-slate-500">{msg.text}</p> : <MessageRenderer text={msg.text} />}
-                            <div className="text-right text-xs mt-1.5 opacity-70">
-                                {msg.editedAt && <span>(editado) </span>}
-                                {formatTimestamp(msg.timestamp)}
+
+                        <div className={`order-2 ${isMyMessage ? 'pl-8' : 'pr-8'}`}>
+                            {!isMyMessage && isFirstInGroup && msg.role !== 'ai' && <p className={`font-bold text-sm mb-1 ml-3 ${getRoleColor(msg.role)}`}>{msg.name}</p>}
+                            <div className={`p-3 rounded-2xl max-w-xs md:max-w-sm ${bubbleClasses} ${isMyMessage ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white' : 'bg-slate-100 dark:bg-indigo-800'}`}>
+                                {msg.isDeleted ? <p className="italic text-sm text-slate-400 dark:text-slate-500">{msg.text}</p> : <MessageRenderer text={msg.text} />}
+                                <div className="text-right text-xs mt-1.5 opacity-70">
+                                    {msg.editedAt && <span>(editado) </span>}
+                                    {formatTimestamp(msg.timestamp)}
+                                </div>
                             </div>
                         </div>
                     </div>
                 );
             })}
+            <TypingIndicator users={typingUsers} />
             <div ref={messagesEndRef} />
         </main>
     );

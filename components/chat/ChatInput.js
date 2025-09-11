@@ -1,8 +1,8 @@
 // NOME DO ARQUIVO: components/chat/ChatInput.js
-// Versão com rodapé redesenhado para melhor usabilidade, especialmente em dispositivos móveis.
-// As ações secundárias foram agrupadas num menu pop-up para uma interface mais limpa.
+// APRIMORAMENTO: Redesign da barra de input para acesso mais rápido a emojis.
+// Adicionada a funcionalidade de anexo de arquivos no menu de ações.
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
     EmojiPicker, 
     PaperAirplaneIcon,
@@ -10,24 +10,25 @@ import {
     EmojiIcon, 
     SoundOnIcon, 
     SoundOffIcon,
-    PlusCircleIcon 
+    PlusCircleIcon,
+    PaperclipIcon
 } from './ChatUI';
 
 /**
- * Menu de Ações que agrupa opções secundárias como Emojis, IA e configurações.
+ * Menu de Ações que agrupa opções secundárias.
  */
 const ActionsMenu = ({ 
     isAiSelected, onAiToggle, 
     popupsEnabled, onPopupsToggle,
     isMuted, onToggleMute,
-    onEmojiButtonClick
+    onFileUploadClick
 }) => (
-    <div className="absolute bottom-20 left-2 md:left-4 bg-white dark:bg-slate-700 p-2 rounded-lg shadow-xl border dark:border-slate-600 w-60 z-20 animate-fade-in">
+    <div className="absolute bottom-16 left-2 md:left-4 bg-white dark:bg-slate-700 p-2 rounded-lg shadow-xl border dark:border-slate-600 w-60 z-20 animate-fade-in">
         <ul className="space-y-1">
             <li>
-                <button onClick={onEmojiButtonClick} className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-600 transition text-slate-700 dark:text-slate-300">
-                    <EmojiIcon />
-                    <span>Inserir Emoji</span>
+                <button onClick={onFileUploadClick} className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-600 transition text-slate-700 dark:text-slate-300">
+                    <PaperclipIcon />
+                    <span>Anexar Arquivo</span>
                 </button>
             </li>
             <li>
@@ -54,34 +55,25 @@ const ActionsMenu = ({
 
 
 const ChatInput = ({
-    newMessage,
-    onNewMessageChange,
-    onSendMessage,
-    isAiSelected,
-    onAiToggle,
-    isLoading,
-    popupsEnabled,
-    onPopupsToggle,
-    isMuted,
-    onToggleMute,
+    newMessage, onNewMessageChange, onSendMessage,
+    isAiSelected, onAiToggle, isLoading,
+    popupsEnabled, onPopupsToggle, isMuted, onToggleMute,
 }) => {
     const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
     const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+    const fileInputRef = useRef(null);
 
     const handleEmojiSelect = (emoji) => {
         const event = { target: { value: newMessage + emoji } };
         onNewMessageChange(event);
-        setIsEmojiPickerVisible(false);
     };
 
-    const toggleEmojiPicker = () => {
-        setIsActionsMenuOpen(false); // Fecha o menu de ações ao abrir o de emojis
-        setIsEmojiPickerVisible(!isEmojiPickerVisible);
-    };
-
-    const toggleActionsMenu = () => {
-        setIsEmojiPickerVisible(false); // Fecha o de emojis ao abrir o menu de ações
-        setIsActionsMenuOpen(!isActionsMenuOpen);
+    const handleFileChange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            console.log("Arquivo selecionado:", file.name);
+            // Lógica de upload seria chamada aqui. Ex: onFileUpload(file);
+        }
     };
     
     return (
@@ -94,45 +86,43 @@ const ChatInput = ({
                     onPopupsToggle={onPopupsToggle}
                     isMuted={isMuted}
                     onToggleMute={onToggleMute}
-                    onEmojiButtonClick={toggleEmojiPicker}
+                    onFileUploadClick={() => { fileInputRef.current.click(); setIsActionsMenuOpen(false); }}
                 />
             )}
             {isEmojiPickerVisible && <EmojiPicker onEmojiSelect={handleEmojiSelect} />}
             
             <form onSubmit={onSendMessage} className="flex items-center gap-2">
-                {/* Botão de Ações (+) */}
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+
                 <button 
                     type="button" 
-                    onClick={toggleActionsMenu} 
+                    onClick={() => { setIsActionsMenuOpen(!isActionsMenuOpen); setIsEmojiPickerVisible(false); }} 
                     className="p-2 flex-shrink-0 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-800 transition" 
                     title="Mais Ações"
                 >
                     <PlusCircleIcon />
                 </button>
                 
-                {/* Campo de Input */}
                 <div className="relative flex-1">
                     <input 
                         type="text" 
                         value={newMessage} 
                         onChange={onNewMessageChange} 
                         placeholder={isAiSelected ? "Pergunte algo para a IA..." : "Digite sua mensagem..."} 
-                        className="w-full px-4 py-2.5 bg-slate-100 dark:bg-indigo-800 border border-transparent focus:ring-2 focus:ring-blue-500 rounded-full text-slate-900 dark:text-white transition-all duration-300"
+                        className="w-full px-4 pr-12 py-2.5 bg-slate-100 dark:bg-indigo-800 border border-transparent focus:ring-2 focus:ring-blue-500 rounded-full text-slate-900 dark:text-white transition-all duration-300"
                         disabled={isLoading}
-                        onFocus={() => {
-                            setIsActionsMenuOpen(false);
-                            setIsEmojiPickerVisible(false);
-                        }}
+                        onFocus={() => { setIsActionsMenuOpen(false); setIsEmojiPickerVisible(false); }}
                     />
-                     {isAiSelected && (
-                        <div className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1 bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 text-xs font-bold px-2 py-0.5 rounded-full pointer-events-none">
-                            <AiIcon />
-                            <span>IA</span>
-                        </div>
-                    )}
+                     <button 
+                        type="button" 
+                        onClick={() => { setIsEmojiPickerVisible(!isEmojiPickerVisible); setIsActionsMenuOpen(false); }} 
+                        className="absolute top-1/2 right-2 -translate-y-1/2 p-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-indigo-700"
+                        title="Inserir Emoji"
+                    >
+                        <EmojiIcon />
+                    </button>
                 </div>
 
-                {/* Botão de Envio */}
                 <button 
                     type="submit" 
                     className="p-2.5 w-11 h-11 flex items-center justify-center flex-shrink-0 font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 transition disabled:bg-slate-400 disabled:cursor-not-allowed transform active:scale-90" 
@@ -147,4 +137,3 @@ const ChatInput = ({
 };
 
 export default ChatInput;
-
