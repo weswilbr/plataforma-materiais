@@ -1,8 +1,6 @@
 // NOME DO ARQUIVO: contexts/AuthContext.js
-// APRIMORAMENTO: O valor do provider foi memoizado para otimizar performance.
-// A lógica de presença foi aprimorada para usar o monitoramento de conexão nativo
-// do Firebase (.info/connected), tornando-a mais resiliente a múltiplas abas e
-// perdas de conexão temporárias.
+// ATUALIZAÇÃO: Adicionada a função 'setOtherUserChatStatus' para permitir
+// que administradores modifiquem o status de outros utilizadores no chat.
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { 
@@ -36,42 +34,57 @@ export function AuthProvider({ children }) {
         const connectedRef = ref(rtdb, '.info/connected');
 
         const listener = onValue(connectedRef, (snap) => {
-            if (snap.val() === true && chatStatus === 'online') {
-                // Se a conexão for reestabelecida e o status desejado é 'online',
-                // redefinimos o status.
+            if (snap.val() === true && chatStatus !== 'offline') {
                 set(userStatusRef, { 
-                    state: 'online', 
+                    state: chatStatus, 
                     name: user.name, 
                     role: user.role, 
                     last_changed: serverTimestamp() 
                 });
-                // Garante que o status será removido se a conexão cair novamente.
                 onDisconnect(userStatusRef).remove();
             }
         });
 
         return () => {
-            // Remove o listener quando o usuário desloga ou o componente é desmontado.
             off(connectedRef, 'value', listener);
         };
     }, [user, chatStatus]);
-
 
     const updateUserChatStatus = useCallback((state) => {
         if (!user) return;
         const userStatusRef = ref(rtdb, '/status/' + user.uid);
 
-        if (state === 'online') {
+        if (state === 'online' || state === 'busy' || state === 'away') {
             set(userStatusRef, { 
-                state: 'online', 
+                state: state, 
                 name: user.name, 
                 role: user.role, 
                 last_changed: serverTimestamp() 
             });
         } else {
-            set(userStatusRef, null); // Usar set(ref, null) é o mesmo que remove(ref)
+            set(userStatusRef, null);
         }
         setChatStatus(state);
+    }, [user]);
+
+    // NOVA FUNÇÃO PARA ADMINS
+    const setOtherUserChatStatus = useCallback(async (targetUser, newState) => {
+        // Verificação de segurança no cliente: só continua se o usuário atual for admin
+        if (!user || user.role !== 'admin' || !targetUser) return;
+        
+        const targetUserStatusRef = ref(rtdb, '/status/' + targetUser.uid);
+        
+        if (newState === 'offline') {
+             await set(targetUserStatusRef, null);
+        } else {
+            // Usa os dados do 'targetUser' para manter a consistência
+            await set(targetUserStatusRef, {
+                state: newState,
+                name: targetUser.name,
+                role: targetUser.role,
+                last_changed: serverTimestamp()
+            });
+        }
     }, [user]);
 
     useEffect(() => {
@@ -81,10 +94,9 @@ export function AuthProvider({ children }) {
                 const userDoc = await getDoc(userDocRef);
                 
                 if (userDoc.exists()) {
-                    const userData = { uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() };
-                    setUser(userData);
+                    setUser({ uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() });
                 } else {
-                    await signOut(auth); // Garante que o signOut complete antes de setar user como null
+                    await signOut(auth);
                     setUser(null);
                 }
             } else {
@@ -101,12 +113,11 @@ export function AuthProvider({ children }) {
             await signInWithEmailAndPassword(auth, email, password);
             return { success: true };
         } catch (error) {
-            // Mapeamento de erros para feedback mais útil
             let message = "Email ou senha inválidos.";
             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                 message = "As credenciais fornecidas estão incorretas.";
             } else if (error.code === 'auth/too-many-requests') {
-                message = "Acesso temporariamente bloqueado devido a muitas tentativas. Tente novamente mais tarde.";
+                message = "Acesso temporariamente bloqueado. Tente novamente mais tarde.";
             }
             return { success: false, error: message };
         }
@@ -114,7 +125,6 @@ export function AuthProvider({ children }) {
     
     const logout = async () => {
         if (user) {
-            // Ao deslogar, remove o status de presença
             const userStatusRef = ref(rtdb, '/status/' + user.uid);
             await set(userStatusRef, null);
         }
@@ -135,16 +145,16 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Memoiza o objeto 'value' para evitar re-renderizações desnecessárias nos componentes consumidores
     const value = useMemo(() => ({
         user, 
         loading, 
         chatStatus, 
         updateUserChatStatus, 
+        setOtherUserChatStatus, // Exporta a nova função
         login, 
         resetPassword, 
         logout 
-    }), [user, loading, chatStatus, updateUserChatStatus]);
+    }), [user, loading, chatStatus, updateUserChatStatus, setOtherUserChatStatus]);
 
     return (
         <AuthContext.Provider value={value}>
