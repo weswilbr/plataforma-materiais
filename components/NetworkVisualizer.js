@@ -1,6 +1,6 @@
 // NOME DO ARQUIVO: components/NetworkVisualizer.js
-// NOVO: Componente para renderizar uma representação visual de uma rede em árvore.
-// Ele limita a exibição de nós para manter a performance, mas mostra o conceito de duplicação.
+// ATUALIZAÇÃO: Aprimorado com contagem de nós renderizados, linhas conectoras,
+// animações e responsividade.
 
 import React from 'react';
 
@@ -11,12 +11,20 @@ const Node = ({ level }) => {
         'bg-emerald-500 text-white',  // Nível 3
         'bg-indigo-500 text-white',   // Nível 4
     ];
-    // Um nó simples, representado por um círculo
-    return <div className={`w-6 h-6 rounded-full shadow-md ${levelColors[level] || 'bg-gray-400'}`}></div>;
+
+    const shapes = ['rounded-full', 'rounded', 'rounded-tr']; // Círculo, quadrado, canto arredondado
+    const nodeSize = ['w-6 h-6', 'w-5 h-5', 'w-4 h-4'];
+
+    const shapeIndex = level % shapes.length;
+    const sizeIndex = level % nodeSize.length;
+
+    return (
+        <div className={`flex items-center justify-center ${nodeSize[sizeIndex]} ${shapes[shapeIndex]} shadow-md ${levelColors[level] || 'bg-gray-400'}`}>
+        </div>
+    );
 };
 
 const MoreNodesIndicator = ({ count }) => (
-    // Indicador para nós que não foram renderizados para manter a performance
     <div className="flex items-center justify-center text-xs font-semibold text-slate-500 dark:text-slate-400">
         +{count}
     </div>
@@ -51,22 +59,26 @@ const NetworkVisualizer = ({ levels }) => {
             }
 
             const remainingNodes = totalNodesInLevel - nodesToRender.length;
+            const renderedNodeCount = nodesToRender.length;
 
             visualTree.push(
                 <div key={`level-container-${i}`} className="flex flex-col items-center">
                     {/* Linha conectora vertical */}
                     <div className="w-px h-6 bg-slate-300 dark:bg-slate-600"></div>
+
                     {/* Wrapper do nível com contagem total */}
                     <div className="text-center">
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
                             Nível {i + 1}
                         </span>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                            ({totalNodesInLevel.toLocaleString('pt-BR')} pessoas)
+                           {/* Mostrar a contagem exata dos nós renderizados */}
+                            ({renderedNodeCount.toLocaleString('pt-BR')} de {totalNodesInLevel.toLocaleString('pt-BR')} pessoas)
                         </p>
                     </div>
+
                     {/* Nós visuais */}
-                    <div className="flex justify-center flex-wrap gap-2 p-2 mt-2 min-h-[32px]">
+                    <div className="flex justify-center flex-wrap gap-2 p-2 mt-2 min-h-[32px] animate-fade-in">
                         {nodesToRender}
                         {remainingNodes > 0 && <MoreNodesIndicator count={remainingNodes} />}
                     </div>
@@ -89,8 +101,10 @@ const NetworkVisualizer = ({ levels }) => {
             </h3>
             <div className="flex flex-col items-center">
                 {/* O nó raiz: "Você" */}
-                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
+                <div className="relative w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
                     Você
+                    {/* Linha vertical que conecta o "Você" ao primeiro nível */}
+                    {levels.length > 0 && <div className="absolute bottom-[-12px] w-px h-6 bg-slate-300 dark:bg-slate-600"></div>}
                 </div>
                 {renderLevels()}
             </div>
