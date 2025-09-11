@@ -1,9 +1,10 @@
 // NOME DO ARQUIVO: components/EarningsProjector.js
-// ATUALIZAÇÃO: O componente agora é "theme-aware", adaptando suas cores de texto,
-// fundo e bordas para funcionar perfeitamente nos temas claro e escuro.
+// ATUALIZAÇÃO: Integrado o componente NetworkVisualizer para exibir um gráfico
+// da rede que se atualiza em tempo real com os sliders.
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { materialsMap } from '../data';
+import NetworkVisualizer from './NetworkVisualizer'; // <<< NOVO: Importa o visualizador
 
 const EarningsProjector = () => {
     const Positions = materialsMap.positionsData;
@@ -249,6 +250,11 @@ const EarningsProjector = () => {
                                   <p className="text-sm text-slate-500 dark:text-slate-400">Total de pessoas na equipe (4 níveis):</p>
                                   <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatNumber(earningsProjection.totalEquipe)}</p>
                               </div>
+                              
+                              {/* <<< NOVO: Visualizador da Rede >>> */}
+                              <NetworkVisualizer 
+                                 levels={[inscritosNivel1, inscritosNivel2, inscritosNivel3, inscritosNivel4]} 
+                              />
                         </div>
                         <div className="p-6 card-gradient rounded-xl shadow-lg dark:shadow-2xl flex flex-col justify-center items-center text-center animate-fadeIn" style={{ animationDelay: '200ms' }}>
                              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Projeção de Ganhos Mensais</h2>
