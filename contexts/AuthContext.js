@@ -1,8 +1,10 @@
 // NOME DO ARQUIVO: contexts/AuthContext.js
-// ATUALIZAÇÃO: A persistência da autenticação foi alterada para 'session',
-// garantindo que o utilizador seja deslogado ao fechar a aba do navegador.
+// APRIMORAMENTO: O valor do provider foi memoizado para otimizar performance.
+// A lógica de presença foi aprimorada para usar o monitoramento de conexão nativo
+// do Firebase (.info/connected), tornando-a mais resiliente a múltiplas abas e
+// perdas de conexão temporárias.
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { 
     onAuthStateChanged, 
     signInWithEmailAndPassword, 
@@ -13,7 +15,7 @@ import {
 } from 'firebase/auth';
 import { auth, db, rtdb } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { ref, set, serverTimestamp, onDisconnect, remove } from "firebase/database";
+import { ref, set, serverTimestamp, onDisconnect, onValue, off } from "firebase/database";
 
 const AuthContext = createContext();
 
@@ -26,7 +28,36 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
     const [chatStatus, setChatStatus] = useState('offline');
 
-    const updateUserChatStatus = (state) => {
+    // Monitora o status da conexão com o Realtime Database
+    useEffect(() => {
+        if (!user) return;
+
+        const userStatusRef = ref(rtdb, '/status/' + user.uid);
+        const connectedRef = ref(rtdb, '.info/connected');
+
+        const listener = onValue(connectedRef, (snap) => {
+            if (snap.val() === true && chatStatus === 'online') {
+                // Se a conexão for reestabelecida e o status desejado é 'online',
+                // redefinimos o status.
+                set(userStatusRef, { 
+                    state: 'online', 
+                    name: user.name, 
+                    role: user.role, 
+                    last_changed: serverTimestamp() 
+                });
+                // Garante que o status será removido se a conexão cair novamente.
+                onDisconnect(userStatusRef).remove();
+            }
+        });
+
+        return () => {
+            // Remove o listener quando o usuário desloga ou o componente é desmontado.
+            off(connectedRef, 'value', listener);
+        };
+    }, [user, chatStatus]);
+
+
+    const updateUserChatStatus = useCallback((state) => {
         if (!user) return;
         const userStatusRef = ref(rtdb, '/status/' + user.uid);
 
@@ -37,12 +68,11 @@ export function AuthProvider({ children }) {
                 role: user.role, 
                 last_changed: serverTimestamp() 
             });
-            onDisconnect(userStatusRef).remove();
         } else {
-            remove(userStatusRef);
+            set(userStatusRef, null); // Usar set(ref, null) é o mesmo que remove(ref)
         }
         setChatStatus(state);
-    };
+    }, [user]);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -51,9 +81,10 @@ export function AuthProvider({ children }) {
                 const userDoc = await getDoc(userDocRef);
                 
                 if (userDoc.exists()) {
-                    setUser({ uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() });
+                    const userData = { uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() };
+                    setUser(userData);
                 } else {
-                    signOut(auth);
+                    await signOut(auth); // Garante que o signOut complete antes de setar user como null
                     setUser(null);
                 }
             } else {
@@ -66,20 +97,26 @@ export function AuthProvider({ children }) {
 
     const login = async (email, password) => {
         try {
-            // Define a persistência da autenticação para a sessão atual do navegador.
-            // Isso garante que o usuário seja deslogado ao fechar a aba/navegador.
             await setPersistence(auth, browserSessionPersistence);
             await signInWithEmailAndPassword(auth, email, password);
             return { success: true };
         } catch (error) {
-            return { success: false, error: "Email ou senha inválidos." };
+            // Mapeamento de erros para feedback mais útil
+            let message = "Email ou senha inválidos.";
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                message = "As credenciais fornecidas estão incorretas.";
+            } else if (error.code === 'auth/too-many-requests') {
+                message = "Acesso temporariamente bloqueado devido a muitas tentativas. Tente novamente mais tarde.";
+            }
+            return { success: false, error: message };
         }
     };
     
     const logout = async () => {
         if (user) {
+            // Ao deslogar, remove o status de presença
             const userStatusRef = ref(rtdb, '/status/' + user.uid);
-            await remove(userStatusRef);
+            await set(userStatusRef, null);
         }
         await signOut(auth);
         setChatStatus('offline');
@@ -90,11 +127,16 @@ export function AuthProvider({ children }) {
             await sendPasswordResetEmail(auth, email);
             return { success: true };
         } catch (error) {
-            return { success: false, error: "Não foi possível enviar o email de recuperação." };
+            let message = "Não foi possível enviar o email de recuperação.";
+            if (error.code === 'auth/user-not-found') {
+                message = "Nenhuma conta encontrada com este endereço de email.";
+            }
+            return { success: false, error: message };
         }
     };
 
-    const value = { 
+    // Memoiza o objeto 'value' para evitar re-renderizações desnecessárias nos componentes consumidores
+    const value = useMemo(() => ({
         user, 
         loading, 
         chatStatus, 
@@ -102,7 +144,7 @@ export function AuthProvider({ children }) {
         login, 
         resetPassword, 
         logout 
-    };
+    }), [user, loading, chatStatus, updateUserChatStatus]);
 
     return (
         <AuthContext.Provider value={value}>
@@ -110,4 +152,3 @@ export function AuthProvider({ children }) {
         </AuthContext.Provider>
     );
 }
-
