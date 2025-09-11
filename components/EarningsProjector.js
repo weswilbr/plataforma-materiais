@@ -1,10 +1,10 @@
 // NOME DO ARQUIVO: components/EarningsProjector.js
-// ATUALIZAÇÃO: Integrado o componente NetworkVisualizer para exibir um gráfico
-// da rede que se atualiza em tempo real com os sliders.
+// VERSÃO FINAL: Inclui simulador de ranking, compatibilidade com temas,
+// visualizador de rede e layout responsivo lado a lado para interatividade.
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { materialsMap } from '../data';
-import NetworkVisualizer from './NetworkVisualizer'; // <<< NOVO: Importa o visualizador
+import NetworkVisualizer from './NetworkVisualizer';
 
 const EarningsProjector = () => {
     const Positions = materialsMap.positionsData;
@@ -223,39 +223,50 @@ const EarningsProjector = () => {
                 {activeTab === 'projetor' && (
                     <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <div className="p-6 card-gradient rounded-xl shadow-lg dark:shadow-2xl animate-fadeIn">
-                             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Monte sua Equipe (até 4 níveis)</h2>
-                             <div className="space-y-5">
-                                 <div>
-                                     <label htmlFor="inscritosNivel1" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">1º Nível (Seus diretos): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel1}</span></label>
-                                     <input type="range" id="inscritosNivel1" min="0" max="20" value={inscritosNivel1} onChange={e => setInscritosNivel1(e.target.value)} className="w-full"/>
-                                 </div>
-                                 <div>
-                                     <label htmlFor="inscritosNivel2" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">2º Nível (Média por pessoa do 1º): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel2}</span></label>
-                                     <input type="range" id="inscritosNivel2" min="0" max="10" value={inscritosNivel2} onChange={e => setInscritosNivel2(e.target.value)} className="w-full"/>
-                                 </div>
-                                  <div>
-                                      <label htmlFor="inscritosNivel3" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">3º Nível (Média por pessoa do 2º): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel3}</span></label>
-                                      <input type="range" id="inscritosNivel3" min="0" max="10" value={inscritosNivel3} onChange={e => setInscritosNivel3(e.target.value)} className="w-full"/>
-                                  </div>
-                                  <div>
-                                      <label htmlFor="inscritosNivel4" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">4º Nível (Média por pessoa do 3º): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel4}</span></label>
-                                      <input type="range" id="inscritosNivel4" min="0" max="10" value={inscritosNivel4} onChange={e => setInscritosNivel4(e.target.value)} className="w-full"/>
-                                  </div>
-                                  <div>
-                                      <label htmlFor="mediaLP" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">Média de pontos (LP) por pessoa: <span className="text-sky-600 dark:text-sky-400 font-bold">{mediaLP} LP</span></label>
-                                      <input type="range" id="mediaLP" min="50" max="500" value={mediaLP} step="5" onChange={e => setMediaLP(e.target.value)} className="w-full"/>
-                                  </div>
-                             </div>
-                              <div className="mt-6 p-4 bg-slate-100 dark:bg-slate-900/50 rounded-lg text-center">
-                                  <p className="text-sm text-slate-500 dark:text-slate-400">Total de pessoas na equipe (4 níveis):</p>
-                                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatNumber(earningsProjection.totalEquipe)}</p>
-                              </div>
-                              
-                              {/* <<< NOVO: Visualizador da Rede >>> */}
-                              <NetworkVisualizer 
-                                 levels={[inscritosNivel1, inscritosNivel2, inscritosNivel3, inscritosNivel4]} 
-                              />
+                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Monte sua Equipe</h2>
+                            
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-8 items-start">
+                                
+                                {/* Coluna 1: Controles */}
+                                <div>
+                                    <div className="space-y-5">
+                                        <div>
+                                            <label htmlFor="inscritosNivel1" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">1º Nível (Seus diretos): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel1}</span></label>
+                                            <input type="range" id="inscritosNivel1" min="0" max="20" value={inscritosNivel1} onChange={e => setInscritosNivel1(e.target.value)} className="w-full"/>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="inscritosNivel2" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">2º Nível (Média por pessoa do 1º): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel2}</span></label>
+                                            <input type="range" id="inscritosNivel2" min="0" max="10" value={inscritosNivel2} onChange={e => setInscritosNivel2(e.target.value)} className="w-full"/>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="inscritosNivel3" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">3º Nível (Média por pessoa do 2º): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel3}</span></label>
+                                            <input type="range" id="inscritosNivel3" min="0" max="10" value={inscritosNivel3} onChange={e => setInscritosNivel3(e.target.value)} className="w-full"/>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="inscritosNivel4" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">4º Nível (Média por pessoa do 3º): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel4}</span></label>
+                                            <input type="range" id="inscritosNivel4" min="0" max="10" value={inscritosNivel4} onChange={e => setInscritosNivel4(e.target.value)} className="w-full"/>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="mediaLP" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">Média de pontos (LP) por pessoa: <span className="text-sky-600 dark:text-sky-400 font-bold">{mediaLP} LP</span></label>
+                                            <input type="range" id="mediaLP" min="50" max="500" value={mediaLP} step="5" onChange={e => setMediaLP(e.target.value)} className="w-full"/>
+                                        </div>
+                                    </div>
+                                    <div className="mt-6 p-4 bg-slate-100 dark:bg-slate-900/50 rounded-lg text-center">
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Total de pessoas na equipe:</p>
+                                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatNumber(earningsProjection.totalEquipe)}</p>
+                                    </div>
+                                </div>
+                                
+                                {/* Coluna 2: Visualizador */}
+                                <div className="mt-6 xl:mt-0">
+                                    <NetworkVisualizer 
+                                        levels={[inscritosNivel1, inscritosNivel2, inscritosNivel3, inscritosNivel4]} 
+                                    />
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Card da Direita: Projeção de Ganhos */}
                         <div className="p-6 card-gradient rounded-xl shadow-lg dark:shadow-2xl flex flex-col justify-center items-center text-center animate-fadeIn" style={{ animationDelay: '200ms' }}>
                              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Projeção de Ganhos Mensais</h2>
                               <div className="bg-green-100 dark:bg-green-600/10 border border-green-300 dark:border-green-500 rounded-xl p-4 w-full">
