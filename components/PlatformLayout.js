@@ -2,6 +2,7 @@
 // ATUALIZAÇÃO: A navegação de "Produtos" foi simplificada. Agora, ao clicar no menu,
 // o utilizador é levado para uma página de vitrine com todos os produtos (ProductShowcase).
 // A lista de produtos foi removida da barra lateral para uma interface mais limpa.
+// NOVO: Adicionado o "Projetor de Ganhos" como uma nova ferramenta na barra de navegação.
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
@@ -10,6 +11,7 @@ import InviteGenerator from './InviteGenerator';
 import WelcomeScreen from './WelcomeScreen';
 import GlobalChat from './GlobalChat';
 import ProspectsList from './ProspectsList';
+import EarningsProjector from './EarningsProjector'; // <<< NOVO: Importa o componente do projetor
 import {
     MaterialViewer, BrochurePresenter, LoyaltyPresenter, TransferFactorPresenter, FactoryPresenter,
     ProductBrowser, OpportunityPresenter, BonusBuilderPresenter, TablesPresenter, GlossaryPresenter,
@@ -60,6 +62,7 @@ const PlatformLayout = () => {
         'chat': { title: 'Chat Global', icon: <Icons.ChatIcon /> },
         'prospects': { title: 'Lista de Prospectos', icon: <Icons.ClipboardListIcon /> },
         'convite': { title: 'Gerador de Convites', icon: <Icons.SparklesIcon /> },
+        'projetor': { title: 'Projetor de Ganhos', icon: <Icons.CalculatorIcon /> }, // <<< NOVO: Adiciona o projetor ao mapa de comandos
         'ranking': { title: 'Ranking', icon: <Icons.TrophyIcon /> },
         'apresentacao': { title: 'Apresentação', icon: <Icons.PresentationIcon /> },
         'marketingrede': { title: 'Marketing de Rede', icon: <Icons.NetworkIcon /> },
@@ -81,7 +84,7 @@ const PlatformLayout = () => {
     
     const menuItems = {
         "Geral": ['inicio', 'chat'],
-        "Ferramentas": ['convite', 'prospects'],
+        "Ferramentas": ['convite', 'prospects', 'projetor'], // <<< NOVO: Adiciona o projetor ao menu de ferramentas
         "Negócio": ['ranking', 'apresentacao', 'marketingrede', 'recompensas2024', 'bonusconstrutor', 'treinamento'],
         "Recursos": ['produtos', 'fatorestransferencia', 'profissionais', 'fabrica4life', 'fidelidade', 'glossario', 'tabelas',  'loja'],
         "Marketing": ['folheteria', 'artes', 'canais'],
@@ -187,7 +190,10 @@ const PlatformLayout = () => {
         }
         
         const componentMap = {
-            'inicio': <WelcomeScreen />, 'convite': <InviteGenerator />, 'prospects': <ProspectsList />,
+            'inicio': <WelcomeScreen />, 
+            'convite': <InviteGenerator />, 
+            'prospects': <ProspectsList />,
+            'projetor': <EarningsProjector />, // <<< NOVO: Mapeia o comando 'projetor' para o componente
             'apresentacao': <OpportunityPresenter onShare={handleOpenShare} />,
             'bonusconstrutor': <BonusBuilderPresenter onShare={handleOpenShare} />,
             'fabrica4life': <FactoryPresenter onShare={handleOpenShare} />,
@@ -195,7 +201,9 @@ const PlatformLayout = () => {
             'fidelidade': <LoyaltyPresenter onShare={handleOpenShare} />,
             'folheteria': <BrochurePresenter onShare={handleOpenShare} />,
             'artes': <ArtsPresenter onShare={handleOpenShare} />,
-            'tabelas': <TablesPresenter />, 'glossario': <GlossaryPresenter />, 'ranking': <RankingPresenter />,
+            'tabelas': <TablesPresenter />, 
+            'glossario': <GlossaryPresenter />, 
+            'ranking': <RankingPresenter />,
             'canais': <ChannelsPresenter />,
         };
 
@@ -264,4 +272,3 @@ const PlatformLayout = () => {
 };
 
 export default PlatformLayout;
-
