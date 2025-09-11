@@ -1,11 +1,13 @@
 // NOME DO ARQUIVO: hooks/useChatManager.js
-// RESPONSABILIDADE: Orquestra os hooks 'useOnlineUsers' e 'useChatMessages'
-// e gerencia a lógica de "digitando..." que conecta os dois.
+// CORREÇÃO: A função 'off' foi importada de 'firebase/database' para permitir
+// a remoção correta do listener de 'typing' ao desmontar o componente,
+// corrigindo o erro 'ReferenceError: off is not defined'.
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { rtdb } from '../firebase';
-import { ref, set, onDisconnect, onValue, serverTimestamp } from "firebase/database";
+// <<< CORREÇÃO APLICADA AQUI >>>
+import { ref, set, onDisconnect, onValue, off, serverTimestamp } from "firebase/database";
 import { useOnlineUsers } from './useOnlineUsers';
 import { useChatMessages } from './useChatMessages';
 
@@ -34,12 +36,9 @@ const useChatManager = (isMinimized, popupsEnabled, isMuted, notificationSound) 
         
         if (isTyping) {
             set(typingRef, { name: user.name, timestamp: serverTimestamp() });
-            // Define um timer para remover o status após alguns segundos,
-            // caso o usuário pare de digitar sem enviar a mensagem.
             setTimeout(() => {
                 set(typingRef, null);
-            }, 4000); // 4 segundos
-            // Garante que o status seja removido se o usuário desconectar
+            }, 4000);
             onDisconnect(typingRef).remove();
         } else {
             set(typingRef, null);
@@ -56,15 +55,14 @@ const useChatManager = (isMinimized, popupsEnabled, isMuted, notificationSound) 
             const now = Date.now();
             
             const currentTypingUsers = Object.keys(typingData)
-                // Remove o próprio usuário da lista
                 .filter(uid => uid !== user.uid)
-                // Considera "digitando" se o timestamp for dos últimos 5 segundos
                 .filter(uid => (now - typingData[uid].timestamp) < 5000)
                 .map(uid => ({ uid, name: typingData[uid].name }));
             
             setTypingUsers(currentTypingUsers);
         });
 
+        // A função de limpeza agora funcionará corretamente
         return () => off(typingRef, 'value', listener);
     }, [user]);
     
