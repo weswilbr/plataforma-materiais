@@ -1,5 +1,6 @@
 // NOME DO ARQUIVO: components/EarningsProjector.js
-// NOVO: Componente que adapta a ferramenta de projeção de ganhos e simulação de carreira para a plataforma.
+// ATUALIZAÇÃO: O componente agora é "theme-aware", adaptando suas cores de texto,
+// fundo e bordas para funcionar perfeitamente nos temas claro e escuro.
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { materialsMap } from '../data';
@@ -153,10 +154,10 @@ const EarningsProjector = () => {
         return (
             <div>
                 <div className="flex justify-between mb-1 text-sm">
-                    <span className="font-medium text-slate-300">{label}</span>
-                    <span className="font-medium text-slate-400">{formatNumber(current)} / {formatNumber(target)}</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{label}</span>
+                    <span className="font-medium text-slate-500 dark:text-slate-400">{formatNumber(current)} / {formatNumber(target)}</span>
                 </div>
-                <div className="w-full bg-slate-700 rounded-full h-2.5">
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
                     <div className="bg-sky-500 h-2.5 rounded-full" style={{ width: `${percentage}%` }}></div>
                 </div>
             </div>
@@ -166,9 +167,9 @@ const EarningsProjector = () => {
     const DetailItem = ({ label, value }) => {
         if (value === null || value === undefined) return null;
         return (
-            <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg">
-                <span className="font-semibold text-slate-400">{label}:</span>
-                <span className="font-bold text-slate-200">{value}</span>
+            <div className="flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-900/50 rounded-lg">
+                <span className="font-semibold text-slate-600 dark:text-slate-400">{label}:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{value}</span>
             </div>
         );
     };
@@ -176,70 +177,84 @@ const EarningsProjector = () => {
     return (
         <>
             <style>{`
-                body { font-family: 'Poppins', sans-serif; }
-                .card-gradient { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(71, 85, 105, 0.3); }
-                .modal-backdrop { background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); }
-                .form-input { background-color: #334155; border: 1px solid #475569; color: #f1f5f9; transition: border-color 0.3s, box-shadow 0.3s; }
-                .form-input:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4); }
-                .form-input::placeholder { color: #94a3b8; }
+                /* Estilos que funcionam em ambos os temas */
+                .tab-button { transition: all 0.3s; border-bottom: 2px solid transparent; }
                 [data-tooltip] { position: relative; cursor: help; }
-                [data-tooltip]::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background-color: #0f172a; color: #e2e8f0; padding: 8px 12px; border-radius: 6px; font-size: 12px; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.3s; z-index: 10; border: 1px solid #334155; }
-                [data-tooltip]:hover::after { opacity: 1; visibility: visible; }
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
                 .animate-fadeIn { animation: fadeIn 0.6s ease-out forwards; }
-                input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; background: #334155; border-radius: 5px; outline: none; }
-                input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; background: #38bdf8; cursor: pointer; border-radius: 50%; border: 4px solid #0f172a; transition: transform 0.2s; }
-                input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
-                .tab-button { transition: all 0.3s; border-bottom: 2px solid transparent; }
+                
+                /* Estilos do Tema Claro */
+                :root:not(.dark) .card-gradient { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(0, 0, 0, 0.08); }
+                :root:not(.dark) .modal-backdrop { background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
+                :root:not(.dark) .form-input { background-color: #f8fafc; border: 1px solid #cbd5e1; color: #1e293b; }
+                :root:not(.dark) .form-input:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4); }
+                :root:not(.dark) .form-input::placeholder { color: #94a3b8; }
+                :root:not(.dark) [data-tooltip]::after { background-color: #f8fafc; color: #0f172a; border: 1px solid #e2e8f0; }
+                :root:not(.dark) input[type="range"] { background: #e2e8f0; }
+                :root:not(.dark) input[type="range"]::-webkit-slider-thumb { background: #0ea5e9; border: 4px solid #ffffff; }
+                
+                /* Estilos do Tema Escuro (originais) */
+                .dark .card-gradient { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(71, 85, 105, 0.3); }
+                .dark .modal-backdrop { background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); }
+                .dark .form-input { background-color: #334155; border: 1px solid #475569; color: #f1f5f9; }
+                .dark .form-input:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4); }
+                .dark .form-input::placeholder { color: #94a3b8; }
+                .dark [data-tooltip]::after { background-color: #0f172a; color: #e2e8f0; border: 1px solid #334155; }
+                .dark input[type="range"] { background: #334155; }
+                .dark input[type="range"]::-webkit-slider-thumb { background: #38bdf8; border: 4px solid #0f172a; }
+
+                /* Estilos de transição e animação (comuns) */
+                [data-tooltip]::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); padding: 8px 12px; border-radius: 6px; font-size: 12px; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.3s; z-index: 10; }
+                [data-tooltip]:hover::after { opacity: 1; visibility: visible; }
                 .tab-button.active { color: #38bdf8; border-bottom-color: #38bdf8; }
             `}</style>
             <div className="container mx-auto">
                 <header className="text-center mb-12">
-                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">Projetor de Ganhos e Carreira</h1>
-                    <p className="text-lg text-slate-400">Simule sua equipe em 4 níveis e projete seus ganhos mensais.</p>
+                    <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-2">Projetor de Ganhos e Carreira</h1>
+                    <p className="text-lg text-slate-600 dark:text-slate-400">Simule sua equipe em 4 níveis e projete seus ganhos mensais.</p>
                 </header>
 
-                <div className="mb-8 flex justify-center border-b border-slate-700">
-                    <button onClick={() => setActiveTab('projetor')} className={`tab-button text-lg font-semibold py-3 px-6 ${activeTab === 'projetor' && 'active'}`}>Projetor de Ganhos</button>
-                    <button onClick={() => setActiveTab('simulador')} className={`tab-button text-lg font-semibold py-3 px-6 ${activeTab === 'simulador' && 'active'}`}>Simulador de Ranking</button>
+                <div className="mb-8 flex justify-center border-b border-slate-200 dark:border-slate-700">
+                    <button onClick={() => setActiveTab('projetor')} className={`tab-button text-lg font-semibold py-3 px-6 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white ${activeTab === 'projetor' && 'active'}`}>Projetor de Ganhos</button>
+                    <button onClick={() => setActiveTab('simulador')} className={`tab-button text-lg font-semibold py-3 px-6 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white ${activeTab === 'simulador' && 'active'}`}>Simulador de Ranking</button>
                 </div>
                 
                 {activeTab === 'projetor' && (
                     <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div className="p-6 card-gradient rounded-xl shadow-2xl animate-fadeIn">
-                             <h2 className="text-2xl font-bold text-white mb-6">Monte sua Equipe (até 4 níveis)</h2>
+                        <div className="p-6 card-gradient rounded-xl shadow-lg dark:shadow-2xl animate-fadeIn">
+                             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Monte sua Equipe (até 4 níveis)</h2>
                              <div className="space-y-5">
                                  <div>
-                                     <label htmlFor="inscritosNivel1" className="block text-md font-medium text-slate-300 mb-2">1º Nível (Seus diretos): <span className="text-sky-400 font-bold">{inscritosNivel1}</span></label>
+                                     <label htmlFor="inscritosNivel1" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">1º Nível (Seus diretos): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel1}</span></label>
                                      <input type="range" id="inscritosNivel1" min="0" max="20" value={inscritosNivel1} onChange={e => setInscritosNivel1(e.target.value)} className="w-full"/>
                                  </div>
                                  <div>
-                                     <label htmlFor="inscritosNivel2" className="block text-md font-medium text-slate-300 mb-2">2º Nível (Média por pessoa do 1º): <span className="text-sky-400 font-bold">{inscritosNivel2}</span></label>
+                                     <label htmlFor="inscritosNivel2" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">2º Nível (Média por pessoa do 1º): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel2}</span></label>
                                      <input type="range" id="inscritosNivel2" min="0" max="10" value={inscritosNivel2} onChange={e => setInscritosNivel2(e.target.value)} className="w-full"/>
                                  </div>
                                   <div>
-                                      <label htmlFor="inscritosNivel3" className="block text-md font-medium text-slate-300 mb-2">3º Nível (Média por pessoa do 2º): <span className="text-sky-400 font-bold">{inscritosNivel3}</span></label>
+                                      <label htmlFor="inscritosNivel3" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">3º Nível (Média por pessoa do 2º): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel3}</span></label>
                                       <input type="range" id="inscritosNivel3" min="0" max="10" value={inscritosNivel3} onChange={e => setInscritosNivel3(e.target.value)} className="w-full"/>
                                   </div>
                                   <div>
-                                      <label htmlFor="inscritosNivel4" className="block text-md font-medium text-slate-300 mb-2">4º Nível (Média por pessoa do 3º): <span className="text-sky-400 font-bold">{inscritosNivel4}</span></label>
+                                      <label htmlFor="inscritosNivel4" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">4º Nível (Média por pessoa do 3º): <span className="text-sky-600 dark:text-sky-400 font-bold">{inscritosNivel4}</span></label>
                                       <input type="range" id="inscritosNivel4" min="0" max="10" value={inscritosNivel4} onChange={e => setInscritosNivel4(e.target.value)} className="w-full"/>
                                   </div>
                                   <div>
-                                      <label htmlFor="mediaLP" className="block text-md font-medium text-slate-300 mb-2">Média de pontos (LP) por pessoa: <span className="text-sky-400 font-bold">{mediaLP} LP</span></label>
+                                      <label htmlFor="mediaLP" className="block text-md font-medium text-slate-700 dark:text-slate-300 mb-2">Média de pontos (LP) por pessoa: <span className="text-sky-600 dark:text-sky-400 font-bold">{mediaLP} LP</span></label>
                                       <input type="range" id="mediaLP" min="50" max="500" value={mediaLP} step="5" onChange={e => setMediaLP(e.target.value)} className="w-full"/>
                                   </div>
                              </div>
-                              <div className="mt-6 p-4 bg-slate-900/50 rounded-lg text-center">
-                                  <p className="text-sm text-slate-400">Total de pessoas na equipe (4 níveis):</p>
-                                  <p className="text-2xl font-bold text-white">{formatNumber(earningsProjection.totalEquipe)}</p>
+                              <div className="mt-6 p-4 bg-slate-100 dark:bg-slate-900/50 rounded-lg text-center">
+                                  <p className="text-sm text-slate-500 dark:text-slate-400">Total de pessoas na equipe (4 níveis):</p>
+                                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatNumber(earningsProjection.totalEquipe)}</p>
                               </div>
                         </div>
-                        <div className="p-6 card-gradient rounded-xl shadow-2xl flex flex-col justify-center items-center text-center animate-fadeIn" style={{ animationDelay: '200ms' }}>
-                             <h2 className="text-2xl font-bold text-white mb-4">Projeção de Ganhos Mensais</h2>
-                              <div className="bg-green-600/10 border border-green-500 rounded-xl p-4 w-full">
-                                  <p className="text-lg text-green-300">Ganho Total Estimado</p>
-                                  <p className="text-5xl font-bold text-white my-2">{formatCurrency(earningsProjection.ganhoTotal)}</p>
+                        <div className="p-6 card-gradient rounded-xl shadow-lg dark:shadow-2xl flex flex-col justify-center items-center text-center animate-fadeIn" style={{ animationDelay: '200ms' }}>
+                             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Projeção de Ganhos Mensais</h2>
+                              <div className="bg-green-100 dark:bg-green-600/10 border border-green-300 dark:border-green-500 rounded-xl p-4 w-full">
+                                  <p className="text-lg text-green-800 dark:text-green-300">Ganho Total Estimado</p>
+                                  <p className="text-5xl font-bold text-slate-900 dark:text-white my-2">{formatCurrency(earningsProjection.ganhoTotal)}</p>
                               </div>
                               <div className="w-full mt-6 space-y-3">
                                   <DetailItem label="Comissão 1º Nível (2%)" value={formatCurrency(earningsProjection.comissaoNivel1)} />
@@ -254,44 +269,44 @@ const EarningsProjector = () => {
 
                 {activeTab === 'simulador' && (
                      <main className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                        <div className="lg:col-span-2 p-6 card-gradient rounded-xl shadow-2xl animate-fadeIn">
+                        <div className="lg:col-span-2 p-6 card-gradient rounded-xl shadow-lg dark:shadow-2xl animate-fadeIn">
                              <div className="flex justify-between items-center mb-6">
-                                 <h2 className="text-2xl font-bold text-white">Simulador de Ranking</h2>
-                                 <button onClick={handleResetSimulator} data-tooltip="Limpar todos os campos" className="text-slate-400 hover:text-white transition-colors">
+                                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Simulador de Ranking</h2>
+                                 <button onClick={handleResetSimulator} data-tooltip="Limpar todos os campos" className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h5M20 20v-5h-5M4 4l16 16"/></svg>
                                  </button>
                              </div>
                              <div className="space-y-4">
                                   <div>
-                                      <label htmlFor="pvMensal" className="block text-sm font-medium text-slate-300 mb-1">
-                                          Seu PV Mensal <span data-tooltip="Pontos de Volume Pessoal" className="text-sky-400">(?)</span>
+                                      <label htmlFor="pvMensal" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                          Seu PV Mensal <span data-tooltip="Pontos de Volume Pessoal" className="text-sky-600 dark:text-sky-400 cursor-help">(?)</span>
                                       </label>
                                       <input type="number" id="pvMensal" value={pvMensal} onChange={e => setPvMensal(e.target.value)} className="w-full p-2 rounded-md form-input" placeholder="Ex: 50"/>
                                   </div>
                                    <div>
-                                       <label htmlFor="inscritosPessoais" className="block text-sm font-medium text-slate-300 mb-1">Inscritos Pessoais Ativos</label>
+                                       <label htmlFor="inscritosPessoais" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Inscritos Pessoais Ativos</label>
                                        <input type="number" id="inscritosPessoais" value={inscritosPessoais} onChange={e => setInscritosPessoais(e.target.value)} className="w-full p-2 rounded-md form-input" placeholder="Ex: 3"/>
                                    </div>
                                    <div>
-                                       <label htmlFor="lp3Niveis" className="block text-sm font-medium text-slate-300 mb-1">
-                                           LP nos 3 Níveis <span data-tooltip="Pontos de Liderança nos seus primeiros 3 níveis" className="text-sky-400">(?)</span>
+                                       <label htmlFor="lp3Niveis" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                           LP nos 3 Níveis <span data-tooltip="Pontos de Liderança nos seus primeiros 3 níveis" className="text-sky-600 dark:text-sky-400 cursor-help">(?)</span>
                                        </label>
                                        <input type="number" id="lp3Niveis" value={lp3Niveis} onChange={e => setLp3Niveis(e.target.value)} className="w-full p-2 rounded-md form-input" placeholder="Ex: 1000"/>
                                    </div>
                                    <div>
-                                       <label htmlFor="voRede" className="block text-sm font-medium text-slate-300 mb-1">
-                                           Volume Organizacional <span data-tooltip="Volume total de pontos da sua equipe" className="text-sky-400">(?)</span>
+                                       <label htmlFor="voRede" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                           Volume Organizacional <span data-tooltip="Volume total de pontos da sua equipe" className="text-sky-600 dark:text-sky-400 cursor-help">(?)</span>
                                        </label>
                                        <input type="number" id="voRede" value={voRede} onChange={e => setVoRede(e.target.value)} className="w-full p-2 rounded-md form-input" placeholder="Ex: 50000"/>
                                    </div>
                                    <div className="pt-4">
-                                       <h3 className="text-lg font-semibold text-white mb-2">Linhas Qualificadas</h3>
+                                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Linhas Qualificadas</h3>
                                        <div className="space-y-2 mb-3 max-h-40 overflow-y-auto pr-2">
                                            {Object.keys(linhasQualificadas).length === 0 ? <p className="text-slate-500 text-sm">Nenhuma linha adicionada.</p> : 
                                             Object.entries(linhasQualificadas).map(([pos, qtd]) => (
-                                                <div key={pos} className="flex justify-between items-center bg-slate-900/50 p-2 rounded animate-fadeIn">
+                                                <div key={pos} className="flex justify-between items-center bg-slate-100 dark:bg-slate-900/50 p-2 rounded animate-fadeIn text-slate-700 dark:text-slate-300">
                                                     <span>{qtd}x {pos}</span>
-                                                    <button onClick={() => handleRemoveLinha(pos)} className="remove-linha-btn text-red-500 hover:text-red-400 font-bold text-xs p-1">REMOVER</button>
+                                                    <button onClick={() => handleRemoveLinha(pos)} className="remove-linha-btn text-red-600 hover:text-red-500 font-bold text-xs p-1">REMOVER</button>
                                                 </div>
                                             ))
                                            }
@@ -309,19 +324,19 @@ const EarningsProjector = () => {
                                  Calcular Ranking
                              </button>
                         </div>
-                        <div className="lg:col-span-3 p-6 card-gradient rounded-xl shadow-2xl flex flex-col justify-center items-center text-center animate-fadeIn" style={{ animationDelay: '200ms' }}>
+                        <div className="lg:col-span-3 p-6 card-gradient rounded-xl shadow-lg dark:shadow-2xl flex flex-col justify-center items-center text-center animate-fadeIn" style={{ animationDelay: '200ms' }}>
                             {!simulationResult ? (
                                 <div className="text-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-16 w-16 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                                    <h2 className="mt-4 text-2xl font-bold text-white">Resultado do Ranking</h2>
-                                    <p className="mt-2 text-slate-400">Preencha os dados para ver sua qualificação.</p>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-16 w-16 text-slate-400 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                                    <h2 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">Resultado do Ranking</h2>
+                                    <p className="mt-2 text-slate-600 dark:text-slate-400">Preencha os dados para ver sua qualificação.</p>
                                 </div>
                             ) : (
                                 <div className="animate-fadeIn w-full">
                                     {!simulationResult.rankName ? (
                                         <>
-                                            <h3 className="text-2xl font-bold text-yellow-400">Você ainda não se qualificou.</h3>
-                                            <p className="mt-2 text-slate-400">Continue para alcançar Associate.</p>
+                                            <h3 className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">Você ainda não se qualificou.</h3>
+                                            <p className="mt-2 text-slate-600 dark:text-slate-400">Continue para alcançar Associate.</p>
                                             <div className="w-full mt-6 space-y-4">
                                                 <ProgressBar label="PV Mensal" current={simulationResult.userInput.pvMensal} target={Positions.Associate.pv_mensal} />
                                                 <ProgressBar label="Inscritos" current={simulationResult.userInput.inscritosPessoais} target={Positions.Associate.inscritos_pessoais} />
@@ -329,13 +344,13 @@ const EarningsProjector = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <p className="text-lg text-slate-400">Seu Ranking Atual</p>
-                                            <h3 className="text-4xl font-bold text-sky-400 my-2">{Positions[simulationResult.rankName].emoji} {simulationResult.rankName}</h3>
-                                            <p className="text-xl font-semibold text-white">Ganhos médios de {formatCurrency(Positions[simulationResult.rankName].media_ganho)}</p>
+                                            <p className="text-lg text-slate-600 dark:text-slate-400">Seu Ranking Atual</p>
+                                            <h3 className="text-4xl font-bold text-sky-600 dark:text-sky-400 my-2">{Positions[simulationResult.rankName].emoji} {simulationResult.rankName}</h3>
+                                            <p className="text-xl font-semibold text-slate-800 dark:text-white">Ganhos médios de {formatCurrency(Positions[simulationResult.rankName].media_ganho)}</p>
                                             
                                             {Positions[simulationResult.rankName].progressao_para && (
                                                 <div className="mt-8 w-full">
-                                                    <h4 className="text-xl font-bold mb-4 text-white border-b border-slate-600 pb-2">Progresso para {Positions[simulationResult.rankName].progressao_para} {Positions[Positions[simulationResult.rankName].progressao_para].emoji}</h4>
+                                                    <h4 className="text-xl font-bold mb-4 text-slate-900 dark:text-white border-b border-slate-300 dark:border-slate-600 pb-2">Progresso para {Positions[simulationResult.rankName].progressao_para} {Positions[Positions[simulationResult.rankName].progressao_para].emoji}</h4>
                                                     <div className="space-y-3 text-left">
                                                         <ProgressBar label="PV Mensal" current={simulationResult.userInput.pvMensal} target={Positions[Positions[simulationResult.rankName].progressao_para].pv_mensal} />
                                                         <ProgressBar label="Inscritos" current={simulationResult.userInput.inscritosPessoais} target={Positions[Positions[simulationResult.rankName].progressao_para].inscritos_pessoais} />
@@ -355,15 +370,15 @@ const EarningsProjector = () => {
                      </main>
                 )}
                  <div className="mt-16">
-                     <h2 className="text-3xl font-bold text-center mb-8 text-white">Guia de Posições</h2>
+                     <h2 className="text-3xl font-bold text-center mb-8 text-slate-900 dark:text-white">Guia de Posições</h2>
                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                         {Object.keys(Positions).map(posName => (
                              <div key={posName} onClick={() => handleOpenModal(posName)} className="p-4 card-gradient rounded-xl shadow-lg cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-sky-500/20">
                                  <div className="flex items-center space-x-4">
                                      <span className="text-4xl">{Positions[posName].emoji}</span>
                                      <div>
-                                        <h3 className="text-lg font-bold text-white">{posName}</h3>
-                                        <p className="text-sm text-slate-400">{Positions[posName].nivel_categoria}</p>
+                                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">{posName}</h3>
+                                        <p className="text-sm text-slate-600 dark:text-slate-400">{Positions[posName].nivel_categoria}</p>
                                      </div>
                                  </div>
                              </div>
@@ -375,13 +390,13 @@ const EarningsProjector = () => {
             {isModalOpen && selectedPosition && (
                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop" onClick={handleCloseModal}>
                     <div className="card-gradient rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 md:p-8 relative animate-fadeIn" onClick={e => e.stopPropagation()}>
-                        <button onClick={handleCloseModal} className="absolute top-4 right-4 text-slate-400 hover:text-white">
+                        <button onClick={handleCloseModal} className="absolute top-4 right-4 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                         <div className="text-center mb-6">
                             <span className="text-6xl">{selectedPosition.emoji}</span>
-                            <h2 className="text-3xl font-bold mt-2 text-white">{Object.keys(Positions).find(key => Positions[key] === selectedPosition)}</h2>
-                            <p className="text-md text-sky-400">{selectedPosition.nivel_categoria}</p>
+                            <h2 className="text-3xl font-bold mt-2 text-slate-900 dark:text-white">{Object.keys(Positions).find(key => Positions[key] === selectedPosition)}</h2>
+                            <p className="text-md text-sky-600 dark:text-sky-400">{selectedPosition.nivel_categoria}</p>
                         </div>
                         <div className="space-y-3">
                             <DetailItem label="Ganhos Médios" value={formatCurrency(selectedPosition.media_ganho)} />
